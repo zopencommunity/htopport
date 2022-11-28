@@ -1,0 +1,191 @@
+diff --git a/CommandLine.c b/CommandLine.c
+index d21f482..4457599 100644
+--- a/CommandLine.c
++++ b/CommandLine.c
+@@ -12,7 +12,7 @@ in the source distribution for its full text.
+ 
+ #include <assert.h>
+ #include <ctype.h>
+-#include <getopt.h>
++//#include <getopt.h>
+ #include <locale.h>
+ #include <stdbool.h>
+ #include <stdio.h>
+@@ -105,6 +105,7 @@ static CommandLineStatus parseArguments(const char* program, int argc, char** ar
+       .readonly = false,
+    };
+ 
++/*
+    const struct option long_opts[] =
+    {
+       {"help",       no_argument,         0, 'h'},
+@@ -124,9 +125,11 @@ static CommandLineStatus parseArguments(const char* program, int argc, char** ar
+       PLATFORM_LONG_OPTIONS
+       {0, 0, 0, 0}
+    };
++*/
+ 
+    int opt, opti = 0;
+    /* Parse arguments */
++/*
+    while ((opt = getopt_long(argc, argv, "hVMCs:td:u::Up:F:H::", long_opts, &opti))) {
+       if (opt == EOF)
+          break;
+@@ -138,7 +141,6 @@ static CommandLineStatus parseArguments(const char* program, int argc, char** ar
+             printVersionFlag(program);
+             return STATUS_OK_EXIT;
+          case 's':
+-            assert(optarg); /* please clang analyzer, cause optarg can be NULL in the 'u' case */
+             if (String_eq(optarg, "help")) {
+                for (int j = 1; j < LAST_PROCESSFIELD; j++) {
+                   const char* name = Process_fields[j].name;
+@@ -205,7 +207,6 @@ static CommandLineStatus parseArguments(const char* program, int argc, char** ar
+             flags->treeView = true;
+             break;
+          case 'p': {
+-            assert(optarg); /* please clang analyzer, cause optarg can be NULL in the 'u' case */
+             char* argCopy = xStrdup(optarg);
+             char* saveptr;
+             const char* pid = strtok_r(argCopy, ",", &saveptr);
+@@ -259,6 +260,7 @@ static CommandLineStatus parseArguments(const char* program, int argc, char** ar
+          }
+       }
+    }
++*/
+    return STATUS_OK;
+ }
+ 
+diff --git a/Compat.c b/Compat.c
+index 8c88138..bdd8532 100644
+--- a/Compat.c
++++ b/Compat.c
+@@ -36,11 +36,13 @@ int Compat_faccessat(int dirfd,
+ 
+ #endif
+ 
++/*
+    // Error out on unsupported configurations
+    if (dirfd != (int)AT_FDCWD || mode != F_OK) {
+       errno = EINVAL;
+       return -1;
+    }
++*/
+ 
+    // Fallback to stat(2)/lstat(2) depending on flags
+    struct stat statinfo;
+@@ -72,8 +74,10 @@ int Compat_fstatat(int dirfd,
+    char path[4096];
+    xSnprintf(path, sizeof(path), "%s/%s", dirpath, pathname);
+ 
++/*
+    if (flags & AT_SYMLINK_NOFOLLOW)
+       return lstat(path, statbuf);
++*/
+ 
+    return stat(path, statbuf);
+ 
+diff --git a/Meter.c b/Meter.c
+index 164c4d3..2421f29 100644
+--- a/Meter.c
++++ b/Meter.c
+@@ -315,6 +315,7 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
+    x += captionLen;
+    w -= captionLen;
+ 
++/*
+    if (!timercmp(&pl->realtime, &(data->time), <)) {
+       int globalDelay = this->pl->settings->delay;
+       struct timeval delay = { .tv_sec = globalDelay / 10, .tv_usec = (globalDelay % 10) * 100000L };
+@@ -328,6 +329,7 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
+          value += this->values[i];
+       data->values[nValues - 1] = value;
+    }
++*/
+ 
+    int i = nValues - (w * 2), k = 0;
+    if (i < 0) {
+diff --git a/Process.c b/Process.c
+index 2a4c809..526cac9 100644
+--- a/Process.c
++++ b/Process.c
+@@ -36,6 +36,17 @@ in the source distribution for its full text.
+ #endif
+ 
+ 
++char *
++stpcpy(char * restrict dst, const char * restrict src) {
++  const size_t length = strlen(src);
++    //  The stpcpy() and strcpy() functions copy the string src to dst
++    //  (including the terminating '\0' character).
++    memcpy(dst, src, length + 1);
++    //  The stpcpy() and stpncpy() functions return a pointer to the
++    //  terminating '\0' character of dst.
++    return dst + length;
++}
++
+ /* Used to identify kernel threads in Comm and Exe columns */
+ static const char* const kthreadID = "KTHREAD";
+ 
+diff --git a/XUtils.c b/XUtils.c
+index 2012b6c..ab7c7f9 100644
+--- a/XUtils.c
++++ b/XUtils.c
+@@ -20,6 +20,58 @@ in the source distribution for its full text.
+ 
+ #include "CRT.h"
+ 
++char *strcasestr(const char *str, const char *pattern) {
++    size_t i;
++
++    if (!*pattern)
++        return (char*)str;
++
++    for (; *str; str++) {
++        if (toupper((unsigned char)*str) == toupper((unsigned char)*pattern)) {
++            for (i = 1;; i++) {
++                if (!pattern[i])
++                    return (char*)str;
++                if (toupper((unsigned char)str[i]) != toupper((unsigned char)pattern[i]))
++                    break;
++            }
++        }
++    }
++    return NULL;
++}
++
++static inline int vasprintf(char **strp, const char *fmt, va_list ap) {
++  int str_size = -1;
++  va_list ap2;
++
++  va_copy(ap2, ap);
++  int count = vsnprintf(0, 0, fmt, ap2);
++  va_end(ap2);
++
++  if (count < 0)
++    return -1;
++
++  const size_t buf_size = count + 1;
++  char *const buf = (char *)malloc(buf_size);
++  if (buf) {
++    *strp = buf;
++    str_size = vsnprintf(*strp, buf_size, fmt, ap);
++    if (str_size < 0 || str_size >= buf_size) {
++      free(buf);
++      str_size = -1;
++    }
++  }
++  return str_size;
++}
++
++char *strndup(const char *s, size_t n)
++{
++  size_t l = strnlen(s, n);
++  char *d = malloc(l+1);
++  if (!d) return NULL;
++  memcpy(d, s, l);
++  d[l] = 0;
++  return d;
++}
+ 
+ void fail() {
+    CRT_done();

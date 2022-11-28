@@ -1,0 +1,24 @@
+export ZOPEN_GIT_URL="https://github.com/htop-dev/htop.git"
+export ZOPEN_GIT_DEPS="git autoconf automake make"
+export ZOPEN_TARBALL_URL="https://github.com/htop-dev/htop/releases/download/3.2.1/htop-3.2.1.tar.xz"
+export ZOPEN_TARBALL_DEPS="curl make gzip tar ncurses zoslib"
+export ZOPEN_TYPE="TARBALL"
+export ZOPEN_EXTRA_CONFIGURE_OPTS="--disable-unicode"
+export ZOPEN_EXTRA_CPPFLAGS="-I\$ZOSLIB_HOME/include -I\$NCURSES_HOME/include/ncurses"
+
+zopen_check_results()
+{
+  dir="$1"
+  pfx="$2"
+  chk="$1/$2_check.log"
+
+  # Echo the following information to guage build health
+  echo "actualFailures:0"
+  echo "totalTests:1"
+  echo "expectedFailures:0"
+}
+
+zopen_append_to_env()
+{
+  # echo envars outside of PATH, MANPATH, LIBPATH
+}
