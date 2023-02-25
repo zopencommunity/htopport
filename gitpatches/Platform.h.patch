@@ -1,0 +1,28 @@
+diff --git a/zos/Platform.h b/zos/Platform.h
+new file mode 100644
+index 00000000..e114ea02
+--- /dev/null
++++ b/zos/Platform.h
+@@ -0,0 +1,22 @@
++#ifndef HEADER_Platform
++#define HEADER_Platform
++
++#include "Meter.h"
++#include "SignalsPanel.h"
++extern const MeterClass* const Platform_meterTypes[];
++
++#define PLATFORM_LONG_OPTIONS
++
++
++extern const ScreenDefaults Platform_defaultScreens[];
++
++extern const unsigned int Platform_numberOfDefaultScreens;
++
++extern const SignalItem Platform_signals[];
++
++extern const unsigned int Platform_numberOfSignals;
++
++extern const MeterClass* const Platform_meterTypes[];
++
++
++#endif
