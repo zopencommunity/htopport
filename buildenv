@@ -1,11 +1,17 @@
 export ZOPEN_GIT_URL="https://github.com/htop-dev/htop.git"
-export ZOPEN_GIT_DEPS="git autoconf automake make"
+export ZOPEN_GIT_DEPS="git autoconf automake make gzip tar ncurses zoslib automake autoconf m4 perl"
 export ZOPEN_TARBALL_URL="https://github.com/htop-dev/htop/releases/download/3.2.1/htop-3.2.1.tar.xz"
 export ZOPEN_TARBALL_DEPS="curl make gzip tar ncurses zoslib automake autoconf m4 perl"
-export ZOPEN_TYPE="TARBALL"
-#export ZOPEN_EXTRA_CONFIGURE_OPTS="--disable-unicode"
+export ZOPEN_TYPE="GIT"
+export ZOPEN_EXTRA_CONFIGURE_OPTS="--disable-unicode"
 export ZOPEN_EXTRA_CPPFLAGS="-I\$ZOSLIB_HOME/include,\$NCURSES_HOME/include/ncurses,zos"
 
+rm patches
+if [ "${ZOPEN_TYPE}" = "GIT" ]; then
+  ln -s gitpatches patches
+else
+  ln -s tarballpatches patches
+fi
 zopen_check_results()
 {
   dir="$1"
