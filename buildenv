@@ -1,5 +1,5 @@
 export ZOPEN_GIT_URL="https://github.com/htop-dev/htop.git"
-export ZOPEN_GIT_DEPS="git autoconf automake make gzip tar ncurses zoslib automake autoconf m4 perl"
+export ZOPEN_GIT_DEPS="git autoconf automake make gzip tar ncurses zoslib automake autoconf m4 perl getopt"
 export ZOPEN_TARBALL_URL="https://github.com/htop-dev/htop/releases/download/3.2.1/htop-3.2.1.tar.xz"
 export ZOPEN_TARBALL_DEPS="curl make gzip tar ncurses zoslib automake autoconf m4 perl"
 export ZOPEN_TYPE="GIT"
