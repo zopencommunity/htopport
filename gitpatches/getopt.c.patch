@@ -1,0 +1,9 @@
+diff --git a/zos/getopt.c b/zos/getopt.c
+new file mode 100644
+index 00000000..85ffc2d2
+--- /dev/null
++++ b/zos/getopt.c
+@@ -0,0 +1,3 @@
++#include <getopt.h>
++
++

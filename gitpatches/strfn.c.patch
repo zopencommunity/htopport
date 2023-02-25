@@ -1,0 +1,8 @@
+diff --git a/zos/strfn.c b/zos/strfn.c
+new file mode 100644
+index 00000000..139597f9
+--- /dev/null
++++ b/zos/strfn.c
+@@ -0,0 +1,2 @@
++
++
