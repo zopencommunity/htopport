@@ -1,8 +1,8 @@
 diff --git a/Makefile.am b/Makefile.am
-index 2a6db44d..2e5e09e0 100644
+index 2a6db44d..a2b870b2 100644
 --- a/Makefile.am
 +++ b/Makefile.am
-@@ -381,6 +381,29 @@ myhtopplatheaders = $(solaris_platform_headers)
+@@ -381,6 +381,33 @@ myhtopplatheaders = $(solaris_platform_headers)
  myhtopplatsources = $(solaris_platform_sources)
  endif
  
@@ -14,13 +14,17 @@ index 2a6db44d..2e5e09e0 100644
 +	generic/hostname.h \
 +	generic/uname.h \
 +	zos/ProcessField.h \
++	zos/ZOSProcess.h \
++	zos/ZOSProcessList.h \
 +	zos/Platform.h
 +
-+solaris_platform_sources = \
++zos_platform_sources = \
 +	generic/gettime.c \
 +	generic/hostname.c \
 +	generic/uname.c \
 +	zos/Platform.c \
++	zos/ZOSProcess.c \
++	zos/ZOSProcessList.c \
 +  zos/getopt.c \
 +  zos/strfn.c
 +

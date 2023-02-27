@@ -1,0 +1,11 @@
+diff --git a/zos/ZOSProcessList.c b/zos/ZOSProcessList.c
+new file mode 100644
+index 00000000..044cb435
+--- /dev/null
++++ b/zos/ZOSProcessList.c
+@@ -0,0 +1,5 @@
++#include "zos/ZOSProcessList.h"
++
++bool ProcessList_isCPUonline(const ProcessList* super, unsigned int id) {
++  return 1;
++}
