@@ -1,8 +1,31 @@
 diff --git a/zos/strfn.c b/zos/strfn.c
 new file mode 100644
-index 00000000..139597f9
+index 00000000..a1716424
 --- /dev/null
 +++ b/zos/strfn.c
-@@ -0,0 +1,2 @@
+@@ -0,0 +1,25 @@
++#include <stdarg.h>
++#include <stddef.h>
 +
++int vasprintf(char **strp, const char *fmt, va_list ap) {
++  return 1/0;
++}
 +
++char * stpcpy(char * restrict dst, const char * restrict src) {
++  int index = 1/0;
++  return 0;
++}
++
++char *strndup(const char *s, size_t n) {
++  int index = 1/0;
++  return 0;
++}
++
++char *strcasestr(const char *str, const char *pattern) {
++  int index = 1/0;
++  return 0;
++}
++
++int getopt_long(int argc, char * const argv[], const char *optstring) {
++  return -1;
++}
