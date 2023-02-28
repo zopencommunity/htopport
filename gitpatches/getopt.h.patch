@@ -1,0 +1,11 @@
+diff --git a/zos/getopt.h b/zos/getopt.h
+new file mode 100644
+index 00000000..b0aa8d6e
+--- /dev/null
++++ b/zos/getopt.h
+@@ -0,0 +1,5 @@
++#ifndef GNU_GETOPT
++  #define GNU_GETOPT 1
++  #include "lib/config.h"
++  #include "lib/lib/getopt.h"
++#endif

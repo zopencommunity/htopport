@@ -7,8 +7,8 @@ export ZOPEN_BOOTSTRAP="./autogen.sh"
 export ZOPEN_EXTRA_CONFIGURE_OPTS="--disable-unicode"
 export ZOPEN_EXTRA_CPPFLAGS="-I\$ZOSLIB_HOME/include,\$NCURSES_HOME/include/ncurses,zos"
 export ZOPEN_EXTRA_CFLAGS='-qnoopt'
-export ZOPEN_EXTRA_LDFLAGS='zos/lib/lib'
-export ZOPEN_EXTRA_LIBS='gnu'
+export ZOPEN_EXTRA_LDFLAGS="-L $HOME/zopen/dev/htopport/htop/zos/lib/lib" # hack - fix
+export ZOPEN_EXTRA_LIBS='-l gnu'
 
 #
 # Current build requires manual steps because the GNU library has to
