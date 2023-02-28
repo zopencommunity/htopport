@@ -1,12 +1,19 @@
 diff --git a/zos/genlib.sh b/zos/genlib.sh
 new file mode 100755
-index 00000000..95614e9f
+index 00000000..06fb2eb9
 --- /dev/null
 +++ b/zos/genlib.sh
-@@ -0,0 +1,62 @@
+@@ -0,0 +1,69 @@
 +#!/bin/sh
 +
 +gnulibtool="$HOME/zopen/dev/gnulibport/gnulib/gnulib-tool"
++
++#
++# Clean up LIBs from environment since not needed for gnulib
++#
++export LIBS=''
++export LDFLAGS=''
++
 +rm -rf lib
 +mkdir lib || exit 99
 +cd lib

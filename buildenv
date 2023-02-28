@@ -7,7 +7,18 @@ export ZOPEN_BOOTSTRAP="./autogen.sh"
 export ZOPEN_EXTRA_CONFIGURE_OPTS="--disable-unicode"
 export ZOPEN_EXTRA_CPPFLAGS="-I\$ZOSLIB_HOME/include,\$NCURSES_HOME/include/ncurses,zos"
 export ZOPEN_EXTRA_CFLAGS='-qnoopt'
+export ZOPEN_EXTRA_LDFLAGS='zos/lib/lib'
+export ZOPEN_EXTRA_LIBS='gnu'
 
+#
+# Current build requires manual steps because the GNU library has to
+# be generated after patches applied
+#
+# zopen build -s
+# cd zos
+# ./genlib.sh
+# exit
+# zopen build
 rm -f patches
 if [ "${ZOPEN_TYPE}" = "GIT" ]; then
   ln -s gitpatches patches
