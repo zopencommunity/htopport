@@ -1,0 +1,68 @@
+diff --git a/zos/genlib.sh b/zos/genlib.sh
+new file mode 100755
+index 00000000..95614e9f
+--- /dev/null
++++ b/zos/genlib.sh
+@@ -0,0 +1,62 @@
++#!/bin/sh
++
++gnulibtool="$HOME/zopen/dev/gnulibport/gnulib/gnulib-tool"
++rm -rf lib
++mkdir lib || exit 99
++cd lib
++cat >configure.ac <<ZZ
++AC_INIT([htopreq-c], [0])
++AM_INIT_AUTOMAKE([])
++AC_PROG_CC
++AC_CONFIG_HEADERS([config.h])
++AC_CONFIG_FILES([
++ Makefile
++ lib/Makefile
++])
++
++gl_EARLY
++gl_INIT
++AC_OUTPUT
++ZZ
++
++cat >Makefile.am <<ZZ
++ACLOCAL_AMFLAGS = -I m4
++SUBDIRS = lib 
++EXTRA_DIST = m4/gnulib-cache.m4
++ZZ
++
++cat >AUTHORS <<ZZ
++  z/OS Open Tools
++ZZ
++
++cat >ChangeLog <<ZZ
++  creation
++ZZ
++
++cat >NEWS <<ZZ
++  I get all the news I need on the Weather Report
++ZZ
++
++cat >README <<ZZ
++  Example to validate gnulib basics ok
++ZZ
++
++if ! "${gnulibtool}" --import getopt-gnu stpcpy strndup strcasestr vasprintf ; then
++  echo "Unable to run gnulibtool to create htop z/OS gnu libraries" >&2
++  exit 8
++fi
++
++if ! autoreconf --install ; then
++  echo "autoreconf failed" >&2
++  exit 8
++fi
++
++if ! ./configure CC=xlclang ; then
++  echo "configure failed" >&2
++  exit 8
++fi
++
++if ! make ; then
++  echo "make failed" >&2
++  exit 8
++fi
