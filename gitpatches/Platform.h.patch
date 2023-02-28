@@ -1,9 +1,9 @@
 diff --git a/zos/Platform.h b/zos/Platform.h
 new file mode 100644
-index 00000000..0777f773
+index 00000000..784b8b3b
 --- /dev/null
 +++ b/zos/Platform.h
-@@ -0,0 +1,154 @@
+@@ -0,0 +1,156 @@
 +#ifndef HEADER_Platform
 +#define HEADER_Platform
 +/*
@@ -119,9 +119,11 @@ index 00000000..0777f773
 +   #define PLATFORM_LONG_OPTIONS
 +#endif
 +
-+void Platform_longOptionsUsage(const char* name);
++static inline void Platform_longOptionsUsage(ATTR_UNUSED const char* name) { }
 +
-+CommandLineStatus Platform_getLongOption(int opt, int argc, char** argv);
++static inline CommandLineStatus Platform_getLongOption(ATTR_UNUSED int opt, ATTR_UNUSED int argc, ATTR_UNUSED char** argv) {
++   return STATUS_ERROR_EXIT;
++}
 +
 +static inline void Platform_gettime_realtime(struct timeval* tv, uint64_t* msec) {
 +   Generic_gettime_realtime(tv, msec);
