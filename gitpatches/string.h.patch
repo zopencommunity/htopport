@@ -1,0 +1,15 @@
+diff --git a/zos/string.h b/zos/string.h
+new file mode 100644
+index 00000000..b494abe6
+--- /dev/null
++++ b/zos/string.h
+@@ -0,0 +1,9 @@
++/*
++ * Prototypes for string functions from gnulib
++ */
++
++#include <stddef.h>
++char * stpcpy(char *restrict __dst, char const *restrict __src);
++char * strndup(char const *__s, size_t __n)
++char * strcasestr(const char *haystack, const char *needle)
++#include_next <string.h>

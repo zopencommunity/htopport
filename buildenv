@@ -3,11 +3,18 @@ export ZOPEN_GIT_DEPS="git autoconf automake make gzip tar ncurses zoslib automa
 export ZOPEN_TARBALL_URL="https://github.com/htop-dev/htop/releases/download/3.2.1/htop-3.2.1.tar.xz"
 export ZOPEN_TARBALL_DEPS="curl make gzip tar ncurses zoslib automake autoconf m4 perl"
 export ZOPEN_TYPE="GIT"
+
+if [ "${ZOPEN_TYPE}" = "GIT" ] ; then
+  HTOP_DIR="${ZOPEN_ROOT}/htop"
+else
+  HTOP_DIR="${ZOPEN_ROOT}/htop-3.2.1"
+fi
+
 export ZOPEN_BOOTSTRAP="./autogen.sh"
 export ZOPEN_EXTRA_CONFIGURE_OPTS="--disable-unicode"
-export ZOPEN_EXTRA_CPPFLAGS="-I\$ZOSLIB_HOME/include,\$NCURSES_HOME/include/ncurses,zos"
+export ZOPEN_EXTRA_CPPFLAGS="-I${HTOP_DIR}/zos,\$ZOSLIB_HOME/include,\$NCURSES_HOME/include/ncurses,zos"
 export ZOPEN_EXTRA_CFLAGS='-qnoopt'
-export ZOPEN_EXTRA_LDFLAGS="-L $HOME/zopen/dev/htopport/htop/zos/lib/lib" # hack - fix
+export ZOPEN_EXTRA_LDFLAGS="-L ${HTOP_DIR}/zos/lib/lib" # hack - fix
 export ZOPEN_EXTRA_LIBS='-l gnu'
 
 #

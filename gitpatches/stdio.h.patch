@@ -1,0 +1,15 @@
+diff --git a/zos/stdio.h b/zos/stdio.h
+new file mode 100644
+index 00000000..4b795cac
+--- /dev/null
++++ b/zos/stdio.h
+@@ -0,0 +1,9 @@
++/*
++ * Prototypes for stdio functions from gnulib
++ */
++
++ #include <stdarg.h>
++
++int vasprintf(char **result, const char *format, va_list args);
++
++#include_next <stdio.h>
