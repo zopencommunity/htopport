@@ -1,9 +1,9 @@
 diff --git a/zos/ZOSProcessList.c b/zos/ZOSProcessList.c
 new file mode 100644
-index 00000000..ee15c1cb
+index 00000000..212daf90
 --- /dev/null
 +++ b/zos/ZOSProcessList.c
-@@ -0,0 +1,26 @@
+@@ -0,0 +1,31 @@
 +#include "zos/ZOSProcess.h"
 +#include "zos/ZOSProcessList.h"
 +
@@ -20,10 +20,15 @@ index 00000000..ee15c1cb
 +   ProcessList* pl = (ProcessList*) spl;
 +   ProcessList_init(pl, Class(ZOSProcess), usersTable, dynamicMeters, dynamicColumns, pidMatchList, userId);
 +
++   pl->existingCPUs = 1;
++   pl->activeCPUs = 1;
++
 +   return pl;
 +}
 +
 +void ProcessList_goThroughEntries(ProcessList* super, bool pauseProcessUpdate) {
++
++   fprintf(stderr, "Write code to go through entries\n");
 +
 +   // in pause mode only gather global data for meters (CPU/memory/...)
 +   if (pauseProcessUpdate) {

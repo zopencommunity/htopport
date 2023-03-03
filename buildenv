@@ -51,8 +51,3 @@ zopen_get_version()
   version=$(./htop --version | cut -d' ' -f2)
   echo $version
 }
-
-zopen_append_to_env()
-{
-  # echo envars outside of PATH, MANPATH, LIBPATH
-}
