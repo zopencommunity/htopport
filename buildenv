@@ -1,7 +1,7 @@
 export ZOPEN_GIT_URL="https://github.com/htop-dev/htop.git"
-export ZOPEN_GIT_DEPS="git autoconf automake make gzip tar ncurses zoslib automake autoconf m4 perl getopt"
+export ZOPEN_GIT_DEPS="git autoconf automake make gzip tar ncurses zoslib automake autoconf m4 perl gnulib"
+
 export ZOPEN_TARBALL_URL="https://github.com/htop-dev/htop/releases/download/3.2.1/htop-3.2.1.tar.xz"
-export ZOPEN_TARBALL_DEPS="curl make gzip tar ncurses zoslib automake autoconf m4 perl"
 export ZOPEN_TYPE="GIT"
 
 if [ "${ZOPEN_TYPE}" = "GIT" ] ; then
@@ -17,21 +17,13 @@ export ZOPEN_EXTRA_CFLAGS='-qnoopt'
 export ZOPEN_EXTRA_LDFLAGS="-L ${HTOP_DIR}/zos/lib/lib" # hack - fix
 export ZOPEN_EXTRA_LIBS='-l gnu'
 
-#
-# Current build requires manual steps because the GNU library has to
-# be generated after patches applied
-#
-# zopen build -s
-# cd zos
-# ./genlib.sh
-# exit
-# zopen build
 rm -f patches
 if [ "${ZOPEN_TYPE}" = "GIT" ]; then
   ln -s gitpatches patches
 else
   ln -s tarballpatches patches
 fi
+
 zopen_check_results()
 {
   dir="$1"
@@ -42,6 +34,22 @@ zopen_check_results()
   echo "actualFailures:0"
   echo "totalTests:1"
   echo "expectedFailures:0"
+}
+
+#
+# Run genlib to generate GNU functions missing on z/OS _after_ patching
+# but _before_ configuration
+#
+zopen_init()
+{
+  devdir="$1"
+  (cd "${devdir}/zos" && ./genlib.sh)
+}
+
+zopen_get_version()
+{
+  version=$(./htop --version | cut -d' ' -f2)
+  echo $version
 }
 
 zopen_append_to_env()

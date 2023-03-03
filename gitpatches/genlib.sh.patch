@@ -1,15 +1,15 @@
 diff --git a/zos/genlib.sh b/zos/genlib.sh
 new file mode 100755
-index 00000000..0e20a892
+index 00000000..4c14f112
 --- /dev/null
 +++ b/zos/genlib.sh
 @@ -0,0 +1,71 @@
 +#!/bin/sh
 +
-+gnulibtool="$HOME/zopen/dev/gnulibport/gnulib/gnulib-tool"
++gnulibtool="$GNULIB_HOME/gnulib-tool"
 +
 +#
-+# Clean up LIBs from environment since not needed for gnulib
++# Clean up environment since not needed for gnulib
 +#
 +export CFLAGS='-qascii -std=gnu11 -qnocsect -qenum=int -qgonumber -O3'
 +export CPPFLAGS=''
@@ -56,7 +56,7 @@ index 00000000..0e20a892
 +  Example to validate gnulib basics ok
 +ZZ
 +
-+if ! "${gnulibtool}" --import getopt-gnu stpcpy strndup strcasestr vasprintf ; then
++if ! "${gnulibtool}" --avoid=strnlen --import getopt-gnu stpcpy strndup strcasestr vasprintf ; then
 +  echo "Unable to run gnulibtool to create htop z/OS gnu libraries" >&2
 +  exit 8
 +fi
