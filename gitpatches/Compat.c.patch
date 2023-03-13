@@ -1,0 +1,29 @@
+diff --git a/Compat.c b/Compat.c
+index d0ad2cc9..8bde89c8 100644
+--- a/Compat.c
++++ b/Compat.c
+@@ -43,11 +43,13 @@ int Compat_faccessat(int dirfd,
+ 
+ #endif
+ 
++#ifndef __MVS__
+    // Error out on unsupported configurations
+    if (dirfd != (int)AT_FDCWD || mode != F_OK) {
+       errno = EINVAL;
+       return -1;
+    }
++#endif
+ 
+    // Fallback to stat(2)/lstat(2) depending on flags
+    struct stat statinfo;
+@@ -79,8 +81,10 @@ int Compat_fstatat(int dirfd,
+    char path[4096];
+    xSnprintf(path, sizeof(path), "%s/%s", dirpath, pathname);
+ 
++#ifndef __MVS__
+    if (flags & AT_SYMLINK_NOFOLLOW)
+       return lstat(path, statbuf);
++#endif
+ 
+    return stat(path, statbuf);
+ 

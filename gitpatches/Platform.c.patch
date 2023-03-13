@@ -1,0 +1,252 @@
+diff --git a/zos/Platform.c b/zos/Platform.c
+new file mode 100644
+index 00000000..84209721
+--- /dev/null
++++ b/zos/Platform.c
+@@ -0,0 +1,246 @@
++#include "config.h" // IWYU pragma: keep
++
++#include "zos/Platform.h"
++
++#include <math.h>
++
++#include "CPUMeter.h"
++#include "ClockMeter.h"
++#include "DateMeter.h"
++#include "DateTimeMeter.h"
++#include "FileDescriptorMeter.h"
++#include "HostnameMeter.h"
++#include "LoadAverageMeter.h"
++#include "Macros.h"
++#include "MemoryMeter.h"
++#include "MemorySwapMeter.h"
++#include "SwapMeter.h"
++#include "SysArchMeter.h"
++#include "TasksMeter.h"
++#include "UptimeMeter.h"
++
++
++const ScreenDefaults Platform_defaultScreens[] = {
++   {
++      .name = "Main",
++      .columns = "PID USER PRIORITY NICE M_VIRT M_RESIDENT STATE PERCENT_CPU PERCENT_MEM TIME Command",
++      .sortKey = "PERCENT_CPU",
++   },
++};
++
++const unsigned int Platform_numberOfDefaultScreens = ARRAYSIZE(Platform_defaultScreens);
++
++const SignalItem Platform_signals[] = {
++   { .name = " 0 Cancel",    .number =  0 },
++};
++
++const unsigned int Platform_numberOfSignals = ARRAYSIZE(Platform_signals);
++
++const MeterClass* const Platform_meterTypes[] = {
++   &CPUMeter_class,
++   &ClockMeter_class,
++   &DateMeter_class,
++   &DateTimeMeter_class,
++   &LoadAverageMeter_class,
++   &LoadMeter_class,
++   &MemoryMeter_class,
++   &SwapMeter_class,
++   &MemorySwapMeter_class,
++   &TasksMeter_class,
++   &BatteryMeter_class,
++   &HostnameMeter_class,
++   &SysArchMeter_class,
++   &UptimeMeter_class,
++   &AllCPUsMeter_class,
++   &AllCPUs2Meter_class,
++   &AllCPUs4Meter_class,
++   &AllCPUs8Meter_class,
++   &LeftCPUsMeter_class,
++   &RightCPUsMeter_class,
++   &LeftCPUs2Meter_class,
++   &RightCPUs2Meter_class,
++   &LeftCPUs4Meter_class,
++   &RightCPUs4Meter_class,
++   &LeftCPUs8Meter_class,
++   &RightCPUs8Meter_class,
++   &FileDescriptorMeter_class,
++   &BlankMeter_class,
++   NULL
++};
++
++static const char Platform_zos[] = "z/OS";
++
++bool Platform_init(void) {
++   /* no platform-specific setup needed */
++   return true;
++}
++
++void Platform_done(void) {
++   /* no platform-specific cleanup needed */
++}
++
++void Platform_setBindings(Htop_Action* keys) {
++   /* no platform-specific key bindings */
++   (void) keys;
++}
++
++int Platform_getUptime(void) {
++   return 0;
++}
++
++void Platform_getLoadAverage(double* one, double* five, double* fifteen) {
++   *one = 0;
++   *five = 0;
++   *fifteen = 0;
++}
++
++int Platform_getMaxPid(void) {
++   return 1;
++}
++
++double Platform_setCPUValues(Meter* this, unsigned int cpu) {
++   (void) cpu;
++
++   double* v = this->values;
++   v[CPU_METER_FREQUENCY] = NAN;
++   v[CPU_METER_TEMPERATURE] = NAN;
++
++   this->curItems = 1;
++
++   return 0.0;
++}
++
++void Platform_setMemoryValues(Meter* this) {
++   (void) this;
++}
++
++void Platform_setSwapValues(Meter* this) {
++   (void) this;
++}
++
++char* Platform_getProcessEnv(pid_t pid) {
++   (void) pid;
++   return NULL;
++}
++
++FileLocks_ProcessData* Platform_getProcessLocks(pid_t pid) {
++   (void)pid;
++   return NULL;
++}
++
++void Platform_getFileDescriptors(double* used, double* max) {
++   *used = 1337;
++   *max = 4711;
++}
++
++bool Platform_getDiskIO(DiskIOData* data) {
++   (void)data;
++   return false;
++}
++
++bool Platform_getNetworkIO(NetworkIOData* data) {
++   (void)data;
++   return false;
++}
++
++void Platform_getBattery(double* percent, ACPresence* isOnAC) {
++   *percent = NAN;
++   *isOnAC = AC_ERROR;
++}
++
++
++/*
++ IEW2456E 9207 SYMBOL Process_fields UNRESOLVED.  MEMBER COULD NOT BE INCLUDED
++          FROM THE DESIGNATED CALL LIBRARY. NAME SPACE = 3
++ IEW2456E 9207 SYMBOL ProcessList_isCPUonline UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_meterTypes UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY. NAME SPACE = 3
++ IEW2456E 9207 SYMBOL Platform_getBattery UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_longOptionsUsage UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_gettime_realtime UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_getLongOption UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL getopt_long UNRESOLVED.  MEMBER COULD NOT BE INCLUDED FROM
++          THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL ProcessList_delete UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_done UNRESOLVED.  MEMBER COULD NOT BE INCLUDED
++          FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL ProcessList_new UNRESOLVED.  MEMBER COULD NOT BE INCLUDED
++          FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_init UNRESOLVED.  MEMBER COULD NOT BE INCLUDED
++          FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_setCPUValues UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_getDiskIO UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_dynamicColumnsDone UNRESOLVED.  MEMBER COULD NOT
++          BE INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_dynamicColumnWriteField UNRESOLVED.  MEMBER COULD
++          NOT BE INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_dynamicColumnInit UNRESOLVED.  MEMBER COULD NOT
++          BE INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_dynamicColumns UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_dynamicMetersDone UNRESOLVED.  MEMBER COULD NOT
++          BE INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_dynamicMeterUpdateValues UNRESOLVED.  MEMBER
++          COULD NOT BE INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_dynamicMeterInit UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_dynamicMeterDisplay UNRESOLVED.  MEMBER COULD NOT
++          BE INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_dynamicMeters UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_getProcessEnv UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_getFileDescriptors UNRESOLVED.  MEMBER COULD NOT
++          BE INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_getHostname UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_getLoadAverage UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_setBindings UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_setMemoryValues UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_getNetworkIO UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Process_delete UNRESOLVED.  MEMBER COULD NOT BE INCLUDED
++          FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL stpcpy UNRESOLVED.  MEMBER COULD NOT BE INCLUDED FROM THE
++          DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_getMaxPid UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_gettime_monotonic UNRESOLVED.  MEMBER COULD NOT
++          BE INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL ProcessList_goThroughEntries UNRESOLVED.  MEMBER COULD NOT
++          BE INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_getProcessLocks UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_defaultScreens UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY. NAME SPACE = 3
++ IEW2456E 9207 SYMBOL Platform_numberOfDefaultScreens UNRESOLVED.  MEMBER COULD
++          NOT BE INCLUDED FROM THE DESIGNATED CALL LIBRARY. NAME SPACE = 3
++ IEW2456E 9207 SYMBOL Platform_signals UNRESOLVED.  MEMBER COULD NOT BE INCLUDED
++          FROM THE DESIGNATED CALL LIBRARY. NAME SPACE = 3
++ IEW2456E 9207 SYMBOL Platform_numberOfSignals UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY. NAME SPACE = 3
++ IEW2456E 9207 SYMBOL Platform_setSwapValues UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_getRelease UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL Platform_getUptime UNRESOLVED.  MEMBER COULD NOT BE
++          INCLUDED FROM THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL vasprintf UNRESOLVED.  MEMBER COULD NOT BE INCLUDED FROM
++          THE DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL strndup UNRESOLVED.  MEMBER COULD NOT BE INCLUDED FROM THE
++          DESIGNATED CALL LIBRARY.
++ IEW2456E 9207 SYMBOL strcasestr UNRESOLVED.  MEMBER COULD NOT BE INCLUDED FROM
++          THE DESIGNATED CALL LIBRARY.
++ IEW2689W 4C40 DEFINITION SIDE FILE IS NOT DEFINED.
++ */

@@ -1,0 +1,20 @@
+diff --git a/Meter.c b/Meter.c
+index 7f634f19..fc3025b1 100644
+--- a/Meter.c
++++ b/Meter.c
+@@ -315,6 +315,7 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
+    x += captionLen;
+    w -= captionLen;
+ 
++#ifndef __MVS__
+    if (!timercmp(&pl->realtime, &(data->time), <)) {
+       int globalDelay = this->pl->settings->delay;
+       struct timeval delay = { .tv_sec = globalDelay / 10, .tv_usec = (globalDelay % 10) * 100000L };
+@@ -328,6 +329,7 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
+          value += !isnan(this->values[i]) ? this->values[i] : 0;
+       data->values[nValues - 1] = value;
+    }
++#endif
+ 
+    int i = nValues - (w * 2), k = 0;
+    if (i < 0) {

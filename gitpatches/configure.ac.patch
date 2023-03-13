@@ -1,0 +1,23 @@
+diff --git a/configure.ac b/configure.ac
+index 015f9046..c782cc4c 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -51,6 +51,10 @@ solaris*)
+    my_htop_platform=solaris
+    AC_DEFINE([HTOP_SOLARIS], [], [Building for Solaris.])
+    ;;
++openedition*)
++   my_htop_platform=zos
++   AC_DEFINE([HTOP_ZOS], [], [Building for zOS.])
++   ;;
+ *)
+    my_htop_platform=unsupported
+    AC_DEFINE([HTOP_UNSUPPORTED], [], [Building for an unsupported platform.])
+@@ -752,6 +756,7 @@ AM_CONDITIONAL([HTOP_NETBSD], [test "$my_htop_platform" = netbsd])
+ AM_CONDITIONAL([HTOP_OPENBSD], [test "$my_htop_platform" = openbsd])
+ AM_CONDITIONAL([HTOP_DARWIN], [test "$my_htop_platform" = darwin])
+ AM_CONDITIONAL([HTOP_SOLARIS], [test "$my_htop_platform" = solaris])
++AM_CONDITIONAL([HTOP_ZOS], [test "$my_htop_platform" = zos])
+ AM_CONDITIONAL([HTOP_PCP], [test "$my_htop_platform" = pcp])
+ AM_CONDITIONAL([HTOP_UNSUPPORTED], [test "$my_htop_platform" = unsupported])
+ 

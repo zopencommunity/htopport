@@ -1,0 +1,119 @@
+diff --git a/zos/ZOSProcess.h b/zos/ZOSProcess.h
+new file mode 100644
+index 00000000..08ef5d25
+--- /dev/null
++++ b/zos/ZOSProcess.h
+@@ -0,0 +1,113 @@
++#ifndef HEADER_ZOSProcess
++#define HEADER_ZOSProcess
++/*
++htop - ZOSProcess.h
++(C) 2014 Hisham H. Muhammad
++(C) 2020 Red Hat, Inc.  All Rights Reserved.
++Released under the GNU GPLv2+, see the COPYING file
++in the source distribution for its full text.
++*/
++
++#include "config.h" // IWYU pragma: keep
++
++#include <stdbool.h>
++#include <sys/types.h>
++
++#include "Object.h"
++#include "Process.h"
++#include "Settings.h"
++
++
++#define PROCESS_FLAG_LINUX_IOPRIO    0x00000100
++#define PROCESS_FLAG_LINUX_OPENVZ    0x00000200
++#define PROCESS_FLAG_LINUX_VSERVER   0x00000400
++#define PROCESS_FLAG_LINUX_CGROUP    0x00000800
++#define PROCESS_FLAG_LINUX_OOM       0x00001000
++#define PROCESS_FLAG_LINUX_SMAPS     0x00002000
++#define PROCESS_FLAG_LINUX_CTXT      0x00004000
++#define PROCESS_FLAG_LINUX_SECATTR   0x00008000
++#define PROCESS_FLAG_LINUX_LRS_FIX   0x00010000
++#define PROCESS_FLAG_LINUX_DELAYACCT 0x00040000
++#define PROCESS_FLAG_LINUX_AUTOGROUP 0x00080000
++
++typedef struct ZOSProcess_ {
++   Process super;
++   unsigned long int cminflt;
++   unsigned long int cmajflt;
++   unsigned long long int utime;
++   unsigned long long int stime;
++   unsigned long long int cutime;
++   unsigned long long int cstime;
++   long m_share;
++   long m_pss;
++   long m_swap;
++   long m_psswp;
++   long m_trs;
++   long m_drs;
++   long m_lrs;
++
++   /* Process flags */
++   unsigned long int flags;
++
++   /* Data read (in bytes) */
++   unsigned long long io_rchar;
++
++   /* Data written (in bytes) */
++   unsigned long long io_wchar;
++
++   /* Number of read(2) syscalls */
++   unsigned long long io_syscr;
++
++   /* Number of write(2) syscalls */
++   unsigned long long io_syscw;
++
++   /* Storage data read (in bytes) */
++   unsigned long long io_read_bytes;
++
++   /* Storage data written (in bytes) */
++   unsigned long long io_write_bytes;
++
++   /* Storage data cancelled (in bytes) */
++   unsigned long long io_cancelled_write_bytes;
++
++   /* Point in time of last io scan (in milliseconds elapsed since the Epoch) */
++   unsigned long long io_last_scan_time_ms;
++
++   /* Storage data read (in bytes per second) */
++   double io_rate_read_bps;
++
++   /* Storage data written (in bytes per second) */
++   double io_rate_write_bps;
++
++   char* cgroup;
++   char* cgroup_short;
++   unsigned int oom;
++   unsigned long ctxt_total;
++   unsigned long ctxt_diff;
++   char* secattr;
++   unsigned long long int last_mlrs_calctime;
++
++   /* Autogroup scheduling (CFS) information */
++   long int autogroup_id;
++   int autogroup_nice;
++} ZOSProcess;
++
++extern int pageSize;
++
++extern int pageSizeKB;
++
++extern const ProcessFieldData Process_fields[LAST_PROCESSFIELD];
++
++extern const ProcessClass ZOSProcess_class;
++
++Process* ZOSProcess_new(const Settings* settings);
++
++void Process_delete(Object* cast);
++
++bool ZOSProcess_isAutogroupEnabled(void);
++
++bool ZOSProcess_changeAutogroupPriorityBy(Process* this, Arg delta);
++
++bool Process_isThread(const Process* this);
++
++#endif

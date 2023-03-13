@@ -1,10 +1,28 @@
 export ZOPEN_GIT_URL="https://github.com/htop-dev/htop.git"
-export ZOPEN_GIT_DEPS="git autoconf automake make"
+export ZOPEN_GIT_DEPS="git autoconf automake make gzip tar ncurses zoslib automake autoconf m4 perl gnulib"
+
 export ZOPEN_TARBALL_URL="https://github.com/htop-dev/htop/releases/download/3.2.1/htop-3.2.1.tar.xz"
-export ZOPEN_TARBALL_DEPS="curl make gzip tar ncurses zoslib"
-export ZOPEN_TYPE="TARBALL"
+export ZOPEN_TYPE="GIT"
+
+if [ "${ZOPEN_TYPE}" = "GIT" ] ; then
+  HTOP_DIR="${ZOPEN_ROOT}/htop"
+else
+  HTOP_DIR="${ZOPEN_ROOT}/htop-3.2.1"
+fi
+
+export ZOPEN_BOOTSTRAP="./autogen.sh"
 export ZOPEN_EXTRA_CONFIGURE_OPTS="--disable-unicode"
-export ZOPEN_EXTRA_CPPFLAGS="-I\$ZOSLIB_HOME/include -I\$NCURSES_HOME/include/ncurses"
+export ZOPEN_EXTRA_CPPFLAGS="-I${HTOP_DIR}/zos,\$ZOSLIB_HOME/include,\$NCURSES_HOME/include/ncurses,zos"
+export ZOPEN_EXTRA_CFLAGS='-qnoopt'
+export ZOPEN_EXTRA_LDFLAGS="-L ${HTOP_DIR}/zos/lib/lib" # hack - fix
+export ZOPEN_EXTRA_LIBS='-l gnu'
+
+rm -f patches
+if [ "${ZOPEN_TYPE}" = "GIT" ]; then
+  ln -s gitpatches patches
+else
+  ln -s tarballpatches patches
+fi
 
 zopen_check_results()
 {
@@ -18,7 +36,18 @@ zopen_check_results()
   echo "expectedFailures:0"
 }
 
-zopen_append_to_env()
+#
+# Run genlib to generate GNU functions missing on z/OS _after_ patching
+# but _before_ configuration
+#
+zopen_init()
 {
-  # echo envars outside of PATH, MANPATH, LIBPATH
+  devdir="$1"
+  (cd "${devdir}/zos" && ./genlib.sh)
+}
+
+zopen_get_version()
+{
+  version=$(./htop --version | cut -d' ' -f2)
+  echo $version
 }
