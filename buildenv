@@ -51,3 +51,9 @@ zopen_get_version()
   version=$(./htop --version | cut -d' ' -f2)
   echo $version
 }
+
+zopen_append_to_zoslib_env() {
+ cat <<EOF
+ASCII_TERMINFO|set|PROJECT_ROOT/../../ncurses/ncurses/share/terminfo/
+EOF
+}
