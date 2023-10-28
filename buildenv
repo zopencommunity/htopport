@@ -1,13 +1,15 @@
-export ZOPEN_GIT_URL="https://github.com/htop-dev/htop.git"
-export ZOPEN_GIT_DEPS="git autoconf automake make gzip tar ncurses zoslib automake autoconf m4 perl gnulib"
+# bump: htop-version /HTOP_VERSION="(.*)"/ https://github.com/htop-dev/htop.git|semver:*
+HTOP_VERSION="3.2.1"
 
-export ZOPEN_TARBALL_URL="https://github.com/htop-dev/htop/releases/download/3.2.1/htop-3.2.1.tar.xz"
-export ZOPEN_TYPE="GIT"
+export ZOPEN_BUILD_LINE="DEV"
+export ZOPEN_DEV_URL="https://github.com/htop-dev/htop.git"
+export ZOPEN_DEV_DEPS="git autoconf automake make gzip tar ncurses zoslib automake autoconf m4 perl gnulib"
+export ZOPEN_STABLE_URL="https://github.com/htop-dev/htop/releases/download/${HTOP_VERSION}/htop-${HTOP_VERSION}.tar.xz"
 
-if [ "${ZOPEN_TYPE}" = "GIT" ] ; then
+if [ "${ZOPEN_BUILD_LINE}" = "DEV" ] ; then
   HTOP_DIR="${ZOPEN_ROOT}/htop"
 else
-  HTOP_DIR="${ZOPEN_ROOT}/htop-3.2.1"
+  HTOP_DIR="${ZOPEN_ROOT}/htop-${HTOP_VERSION}"
 fi
 
 export ZOPEN_BOOTSTRAP="./autogen.sh"
@@ -18,7 +20,7 @@ export ZOPEN_EXTRA_LDFLAGS="-L ${HTOP_DIR}/zos/lib/lib" # hack - fix
 export ZOPEN_EXTRA_LIBS='-l gnu'
 
 rm -f patches
-if [ "${ZOPEN_TYPE}" = "GIT" ]; then
+if [ "${ZOPEN_BUILD_LINE}" = "DEV" ]; then
   ln -s gitpatches patches
 else
   ln -s tarballpatches patches
