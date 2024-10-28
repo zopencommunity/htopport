@@ -2,6 +2,7 @@
 HTOP_VERSION="3.2.2"
 
 export ZOPEN_BUILD_LINE="DEV"
+export ZOPEN_CATEGORIES="utilities"
 export ZOPEN_DEV_URL="https://github.com/htop-dev/htop.git"
 export ZOPEN_DEV_DEPS="git autoconf automake make gzip tar ncurses zoslib automake autoconf m4 perl gnulib"
 export ZOPEN_STABLE_URL="https://github.com/htop-dev/htop/releases/download/${HTOP_VERSION}/htop-${HTOP_VERSION}.tar.xz"
