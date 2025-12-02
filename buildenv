@@ -1,30 +1,22 @@
 # bump: htop-version /HTOP_VERSION="(.*)"/ https://github.com/htop-dev/htop.git|semver:*
-HTOP_VERSION="3.2.2"
+HTOP_VERSION="3.3.0"
 
-export ZOPEN_BUILD_LINE="DEV"
+export ZOPEN_BUILD_LINE="STABLE"
 export ZOPEN_DEV_URL="https://github.com/htop-dev/htop.git"
-export ZOPEN_DEV_DEPS="git autoconf automake make gzip tar ncurses zoslib automake autoconf m4 perl gnulib"
+export ZOPEN_DEV_DEPS="git autoconf automake make gzip tar ncurses zoslib automake autoconf m4 perl gnulib getopt"
+export ZOPEN_STABLE_DEPS="git autoconf automake make gzip tar ncurses zoslib automake autoconf m4 perl gnulib getopt"
 export ZOPEN_STABLE_URL="https://github.com/htop-dev/htop/releases/download/${HTOP_VERSION}/htop-${HTOP_VERSION}.tar.xz"
 
-if [ "${ZOPEN_BUILD_LINE}" = "DEV" ] ; then
-  HTOP_DIR="${ZOPEN_ROOT}/htop"
-else
-  HTOP_DIR="${ZOPEN_ROOT}/htop-${HTOP_VERSION}"
-fi
+HTOP_DIR="${ZOPEN_ROOT}/htop-${HTOP_VERSION}"
 
 export ZOPEN_BOOTSTRAP="./autogen.sh"
 export ZOPEN_EXTRA_CONFIGURE_OPTS="--disable-unicode"
-export ZOPEN_EXTRA_CPPFLAGS="-I${HTOP_DIR}/zos,\$ZOSLIB_HOME/include,\$NCURSES_HOME/include/ncurses,zos"
-export ZOPEN_EXTRA_CFLAGS='-qnoopt'
+export ZOPEN_EXTRA_CPPFLAGS="-I${HTOP_DIR}/zos -DHAVE_NCURSES_NCURSES_H=1"
 export ZOPEN_EXTRA_LDFLAGS="-L ${HTOP_DIR}/zos/lib/lib" # hack - fix
-export ZOPEN_EXTRA_LIBS='-l gnu'
 
-rm -f patches
-if [ "${ZOPEN_BUILD_LINE}" = "DEV" ]; then
-  ln -s gitpatches patches
-else
-  ln -s tarballpatches patches
-fi
+export ZOPEN_EXTRA_CONFIGURE_OPTS="--disable-unicode"
+
+export ZOPEN_COMP=CLANG
 
 zopen_check_results()
 {
@@ -36,16 +28,6 @@ zopen_check_results()
   echo "actualFailures:0"
   echo "totalTests:1"
   echo "expectedFailures:0"
-}
-
-#
-# Run genlib to generate GNU functions missing on z/OS _after_ patching
-# but _before_ configuration
-#
-zopen_init()
-{
-  devdir="$1"
-  (cd "${devdir}/zos" && ./genlib.sh)
 }
 
 zopen_get_version()

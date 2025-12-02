@@ -1,0 +1,38 @@
+diff --git c/zos/ZOSProcess.h w/zos/ZOSProcess.h
+new file mode 100644
+index 0000000..6532c9b
+--- /dev/null
++++ w/zos/ZOSProcess.h
+@@ -0,0 +1,32 @@
++#ifndef HEADER_ZOSProcess
++#define HEADER_ZOSProcess
++/*
++htop - ZOSProcess.h
++(C) 2015 Hisham H. Muhammad
++(C) 2017,2018 Guy M. Broome
++Released under the GNU GPLv2+, see the COPYING file
++in the source distribution for its full text.
++*/
++
++#include "Process.h"
++#include "Machine.h"
++
++
++typedef struct ZOSProcess_ {
++   Process    super;
++   char*      zname;
++   pid_t      realpid;
++   pid_t      realppid;
++   pid_t      realtgid;
++   pid_t      lwpid;
++} ZOSProcess;
++
++extern const ProcessClass ZOSProcess_class;
++
++extern const ProcessFieldData Process_fields[LAST_PROCESSFIELD];
++
++Process* ZOSProcess_new(const Machine* host);
++
++void Process_delete(Object* cast);
++
++#endif

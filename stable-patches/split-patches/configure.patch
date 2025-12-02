@@ -1,0 +1,1479 @@
+diff --git c/configure w/configure
+index efe85a7..2578b56 100755
+--- c/configure
++++ w/configure
+@@ -138,7 +138,7 @@ printf "%s\n" "$0: could not re-execute with $CONFIG_SHELL" >&2
+ exit 255
+   fi
+   # We don't want this to propagate to other subprocesses.
+-          { _as_can_reexec=; unset _as_can_reexec;}
++          {  unset _as_can_reexec;}
+ if test "x$CONFIG_SHELL" = x; then
+   as_bourne_compatible="as_nop=:
+ if test \${ZSH_VERSION+y} && (emulate sh) >/dev/null 2>&1
+@@ -291,7 +291,7 @@ unset CLICOLOR_FORCE GREP_OPTIONS
+ # Portably unset VAR.
+ as_fn_unset ()
+ {
+-  { eval $1=; unset $1;}
++  { eval  unset $1;}
+ }
+ as_unset=as_fn_unset
+ 
+@@ -658,6 +658,8 @@ HTOP_UNSUPPORTED_FALSE
+ HTOP_UNSUPPORTED_TRUE
+ HTOP_PCP_FALSE
+ HTOP_PCP_TRUE
++HTOP_ZOS_FALSE
++HTOP_ZOS_TRUE
+ HTOP_SOLARIS_FALSE
+ HTOP_SOLARIS_TRUE
+ HTOP_DARWIN_FALSE
+@@ -702,6 +704,8 @@ CPPFLAGS
+ LDFLAGS
+ CFLAGS
+ CC
++am__xargs_n
++am__rm_f_notfound
+ AM_BACKSLASH
+ AM_DEFAULT_VERBOSITY
+ AM_DEFAULT_V
+@@ -1603,7 +1607,7 @@ fi
+ ac_fn_c_try_compile ()
+ {
+   as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
+-  rm -f conftest.$ac_objext conftest.beam
++  rm -f conftest.$ac_objext conftest.dbg conftest.beam
+   if { { ac_try="$ac_compile"
+ case "(($ac_try" in
+   *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+@@ -1660,7 +1664,7 @@ then :
+ else $as_nop
+   eval "$3=no"
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+ fi
+ eval ac_res=\$$3
+ 	       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+@@ -1675,7 +1679,7 @@ printf "%s\n" "$ac_res" >&6; }
+ ac_fn_c_try_link ()
+ {
+   as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
+-  rm -f conftest.$ac_objext conftest.beam conftest$ac_exeext
++  rm -f conftest.$ac_objext conftest.dbg conftest.beam conftest$ac_exeext
+   if { { ac_try="$ac_link"
+ case "(($ac_try" in
+   *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+@@ -1710,7 +1714,7 @@ fi
+   # created by the PGI compiler (conftest_ipa8_conftest.oo), as it would
+   # interfere with the next link command; also delete a directory that is
+   # left behind by Apple's compiler.  We do this before executing the actions.
+-  rm -rf conftest.dSYM conftest_ipa8_conftest.oo
++  rm -rf conftest.dSYM conftest_ipa8_conftest.oo conftest.dbg
+   eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
+   as_fn_set_status $ac_retval
+ 
+@@ -1762,9 +1766,9 @@ then :
+ else $as_nop
+   eval "$3=yes"
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+ fi
+ eval ac_res=\$$3
+ 	       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+@@ -1852,7 +1856,7 @@ then :
+     eval "$3=\$ac_type" ;;
+ esac
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+        if eval test \"x\$"$3"\" = x"no"
+ then :
+ 
+@@ -1920,7 +1924,7 @@ then :
+ else $as_nop
+   eval "$3=no"
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ fi
+ eval ac_res=\$$3
+@@ -1971,7 +1975,7 @@ then :
+ else $as_nop
+   eval "$3=no"
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+   eval $6=\$ac_save_FLAGS
+ 
+ fi
+@@ -2019,7 +2023,7 @@ sed 's/^/| /' conftest.$ac_ext >&5
+ 
+        ac_retval=$ac_status
+ fi
+-  rm -rf conftest.dSYM conftest_ipa8_conftest.oo
++  rm -rf conftest.dSYM conftest_ipa8_conftest.oo conftest.dbg
+   eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
+   as_fn_set_status $ac_retval
+ 
+@@ -2150,8 +2154,8 @@ do
+     esac
+   done
+ done
+-{ ac_configure_args0=; unset ac_configure_args0;}
+-{ ac_configure_args1=; unset ac_configure_args1;}
++{  unset ac_configure_args0;}
++{  unset ac_configure_args1;}
+ 
+ # When interrupted or exit'd, cleanup temporary files, and complete
+ # config.log.  We remove comments because anyway the quotes in there
+@@ -2182,7 +2186,7 @@ printf "%s\n" "$as_me: WARNING: cache variable $ac_var contains a newline" >&2;}
+       case $ac_var in #(
+       _ | IFS | as_nl) ;; #(
+       BASH_ARGV | BASH_SOURCE) eval $ac_var= ;; #(
+-      *) { eval $ac_var=; unset $ac_var;} ;;
++      *) { eval  unset $ac_var;} ;;
+       esac ;;
+     esac
+   done
+@@ -2247,7 +2251,7 @@ printf "%s\n" "$as_me: WARNING: cache variable $ac_var contains a newline" >&2;}
+     rm -f -r conftest* confdefs* conf$$* $ac_clean_files &&
+     exit $exit_status
+ ' 0
+-for ac_signal in 1 2 13 15; do
++for ac_signal in HUP INT PIPE TERM; do
+   trap 'ac_signal='$ac_signal'; as_fn_exit 1' $ac_signal
+ done
+ ac_signal=0
+@@ -2887,7 +2891,7 @@ IFS=$ac_save_IFS
+ case $host_os in *\ *) host_os=`echo "$host_os" | sed 's/ /-/g'`;; esac
+ 
+ 
+-am__api_version='1.16'
++am__api_version='1.17'
+ 
+ 
+   # Find a good install program.  We prefer a C program (faster),
+@@ -2988,6 +2992,162 @@ test -z "$INSTALL_SCRIPT" && INSTALL_SCRIPT='${INSTALL}'
+ 
+ test -z "$INSTALL_DATA" && INSTALL_DATA='${INSTALL} -m 644'
+ 
++{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether sleep supports fractional seconds" >&5
++printf %s "checking whether sleep supports fractional seconds... " >&6; }
++if test ${am_cv_sleep_fractional_seconds+y}
++then :
++  printf %s "(cached) " >&6
++else $as_nop
++  if sleep 0.001 2>/dev/null
++then :
++  am_cv_sleep_fractional_seconds=yes
++else $as_nop
++  am_cv_sleep_fractional_seconds=no
++fi
++
++fi
++{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $am_cv_sleep_fractional_seconds" >&5
++printf "%s\n" "$am_cv_sleep_fractional_seconds" >&6; }
++
++{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking filesystem timestamp resolution" >&5
++printf %s "checking filesystem timestamp resolution... " >&6; }
++if test ${am_cv_filesystem_timestamp_resolution+y}
++then :
++  printf %s "(cached) " >&6
++else $as_nop
++  # Default to the worst case.
++am_cv_filesystem_timestamp_resolution=2
++
++# Only try to go finer than 1 sec if sleep can do it.
++# Don't try 1 sec, because if 0.01 sec and 0.1 sec don't work,
++# - 1 sec is not much of a win compared to 2 sec, and
++# - it takes 2 seconds to perform the test whether 1 sec works.
++#
++# Instead, just use the default 2s on platforms that have 1s resolution,
++# accept the extra 1s delay when using $sleep in the Automake tests, in
++# exchange for not incurring the 2s delay for running the test for all
++# packages.
++#
++am_try_resolutions=
++if test "$am_cv_sleep_fractional_seconds" = yes; then
++  # Even a millisecond often causes a bunch of false positives,
++  # so just try a hundredth of a second. The time saved between .001 and
++  # .01 is not terribly consequential.
++  am_try_resolutions="0.01 0.1 $am_try_resolutions"
++fi
++
++# In order to catch current-generation FAT out, we must *modify* files
++# that already exist; the *creation* timestamp is finer.  Use names
++# that make ls -t sort them differently when they have equal
++# timestamps than when they have distinct timestamps, keeping
++# in mind that ls -t prints the *newest* file first.
++rm -f conftest.ts?
++: > conftest.ts1
++: > conftest.ts2
++: > conftest.ts3
++
++# Make sure ls -t actually works.  Do 'set' in a subshell so we don't
++# clobber the current shell's arguments. (Outer-level square brackets
++# are removed by m4; they're present so that m4 does not expand
++# <dollar><star>; be careful, easy to get confused.)
++if (
++     set X `ls -t conftest.ts[12]` &&
++     {
++       test "$*" != "X conftest.ts1 conftest.ts2" ||
++       test "$*" != "X conftest.ts2 conftest.ts1";
++     }
++); then :; else
++  # If neither matched, then we have a broken ls.  This can happen
++  # if, for instance, CONFIG_SHELL is bash and it inherits a
++  # broken ls alias from the environment.  This has actually
++  # happened.  Such a system could not be considered "sane".
++  printf "%s\n" ""Bad output from ls -t: \"`ls -t conftest.ts[12]`\""" >&5
++  { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
++printf "%s\n" "$as_me: error: in \`$ac_pwd':" >&2;}
++as_fn_error $? "ls -t produces unexpected output.
++Make sure there is not a broken ls alias in your environment.
++See \`config.log' for more details" "$LINENO" 5; }
++fi
++
++for am_try_res in $am_try_resolutions; do
++  # Any one fine-grained sleep might happen to cross the boundary
++  # between two values of a coarser actual resolution, but if we do
++  # two fine-grained sleeps in a row, at least one of them will fall
++  # entirely within a coarse interval.
++  echo alpha > conftest.ts1
++  sleep $am_try_res
++  echo beta > conftest.ts2
++  sleep $am_try_res
++  echo gamma > conftest.ts3
++
++  # We assume that 'ls -t' will make use of high-resolution
++  # timestamps if the operating system supports them at all.
++  if (set X `ls -t conftest.ts?` &&
++      test "$2" = conftest.ts3 &&
++      test "$3" = conftest.ts2 &&
++      test "$4" = conftest.ts1); then
++    #
++    # Ok, ls -t worked. If we're at a resolution of 1 second, we're done,
++    # because we don't need to test make.
++    make_ok=true
++    if test $am_try_res != 1; then
++      # But if we've succeeded so far with a subsecond resolution, we
++      # have one more thing to check: make. It can happen that
++      # everything else supports the subsecond mtimes, but make doesn't;
++      # notably on macOS, which ships make 3.81 from 2006 (the last one
++      # released under GPLv2). https://bugs.gnu.org/68808
++      #
++      # We test $MAKE if it is defined in the environment, else "make".
++      # It might get overridden later, but our hope is that in practice
++      # it does not matter: it is the system "make" which is (by far)
++      # the most likely to be broken, whereas if the user overrides it,
++      # probably they did so with a better, or at least not worse, make.
++      # https://lists.gnu.org/archive/html/automake/2024-06/msg00051.html
++      #
++      # Create a Makefile (real tab character here):
++      rm -f conftest.mk
++      echo 'conftest.ts1: conftest.ts2' >conftest.mk
++      echo '	touch conftest.ts2' >>conftest.mk
++      #
++      # Now, running
++      #   touch conftest.ts1; touch conftest.ts2; make
++      # should touch ts1 because ts2 is newer. This could happen by luck,
++      # but most often, it will fail if make's support is insufficient. So
++      # test for several consecutive successes.
++      #
++      # (We reuse conftest.ts[12] because we still want to modify existing
++      # files, not create new ones, per above.)
++      n=0
++      make=${MAKE-make}
++      until test $n -eq 3; do
++        echo one > conftest.ts1
++        sleep $am_try_res
++        echo two > conftest.ts2 # ts2 should now be newer than ts1
++        if $make -f conftest.mk | grep 'up to date' >/dev/null; then
++          make_ok=false
++          break # out of $n loop
++        fi
++        n=`expr $n + 1`
++      done
++    fi
++    #
++    if $make_ok; then
++      # Everything we know to check worked out, so call this resolution good.
++      am_cv_filesystem_timestamp_resolution=$am_try_res
++      break # out of $am_try_res loop
++    fi
++    # Otherwise, we'll go on to check the next resolution.
++  fi
++done
++rm -f conftest.ts?
++# (end _am_filesystem_timestamp_resolution)
++
++fi
++{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $am_cv_filesystem_timestamp_resolution" >&5
++printf "%s\n" "$am_cv_filesystem_timestamp_resolution" >&6; }
++
++# This check should not be cached, as it may vary across builds of
++# different projects.
+ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether build environment is sane" >&5
+ printf %s "checking whether build environment is sane... " >&6; }
+ # Reject unsafe characters in $srcdir or the absolute working directory
+@@ -3008,49 +3168,44 @@ esac
+ # symlink; some systems play weird games with the mod time of symlinks
+ # (eg FreeBSD returns the mod time of the symlink's containing
+ # directory).
+-if (
+-   am_has_slept=no
+-   for am_try in 1 2; do
+-     echo "timestamp, slept: $am_has_slept" > conftest.file
+-     set X `ls -Lt "$srcdir/configure" conftest.file 2> /dev/null`
+-     if test "$*" = "X"; then
+-	# -L didn't work.
+-	set X `ls -t "$srcdir/configure" conftest.file`
+-     fi
+-     if test "$*" != "X $srcdir/configure conftest.file" \
+-	&& test "$*" != "X conftest.file $srcdir/configure"; then
++am_build_env_is_sane=no
++am_has_slept=no
++rm -f conftest.file
++for am_try in 1 2; do
++  echo "timestamp, slept: $am_has_slept" > conftest.file
++  if (
++    set X `ls -Lt "$srcdir/configure" conftest.file 2> /dev/null`
++    if test "$*" = "X"; then
++      # -L didn't work.
++      set X `ls -t "$srcdir/configure" conftest.file`
++    fi
++    test "$2" = conftest.file
++  ); then
++    am_build_env_is_sane=yes
++    break
++  fi
++  # Just in case.
++  sleep "$am_cv_filesystem_timestamp_resolution"
++  am_has_slept=yes
++done
+ 
+-	# If neither matched, then we have a broken ls.  This can happen
+-	# if, for instance, CONFIG_SHELL is bash and it inherits a
+-	# broken ls alias from the environment.  This has actually
+-	# happened.  Such a system could not be considered "sane".
+-	as_fn_error $? "ls -t appears to fail.  Make sure there is not a broken
+-  alias in your environment" "$LINENO" 5
+-     fi
+-     if test "$2" = conftest.file || test $am_try -eq 2; then
+-       break
+-     fi
+-     # Just in case.
+-     sleep 1
+-     am_has_slept=yes
+-   done
+-   test "$2" = conftest.file
+-   )
+-then
+-   # Ok.
+-   :
+-else
+-   as_fn_error $? "newly created file is older than distributed files!
++{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $am_build_env_is_sane" >&5
++printf "%s\n" "$am_build_env_is_sane" >&6; }
++if test "$am_build_env_is_sane" = no; then
++  as_fn_error $? "newly created file is older than distributed files!
+ Check your system clock" "$LINENO" 5
+ fi
+-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+-printf "%s\n" "yes" >&6; }
++
+ # If we didn't sleep, we still need to ensure time stamps of config.status and
+ # generated files are strictly newer.
+ am_sleep_pid=
+-if grep 'slept: no' conftest.file >/dev/null 2>&1; then
+-  ( sleep 1 ) &
++if test -e conftest.file || grep 'slept: no' conftest.file >/dev/null 2>&1
++then :
++
++else $as_nop
++    ( sleep "$am_cv_filesystem_timestamp_resolution" ) &
+   am_sleep_pid=$!
++
+ fi
+ 
+ rm -f conftest.file
+@@ -3337,17 +3492,13 @@ else
+ fi
+ rmdir .tst 2>/dev/null
+ 
++AM_DEFAULT_VERBOSITY=1
+ # Check whether --enable-silent-rules was given.
+ if test ${enable_silent_rules+y}
+ then :
+   enableval=$enable_silent_rules;
+ fi
+ 
+-case $enable_silent_rules in # (((
+-  yes) AM_DEFAULT_VERBOSITY=0;;
+-   no) AM_DEFAULT_VERBOSITY=1;;
+-    *) AM_DEFAULT_VERBOSITY=1;;
+-esac
+ am_make=${MAKE-make}
+ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether $am_make supports nested variables" >&5
+ printf %s "checking whether $am_make supports nested variables... " >&6; }
+@@ -3369,15 +3520,41 @@ fi
+ fi
+ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $am_cv_make_support_nested_variables" >&5
+ printf "%s\n" "$am_cv_make_support_nested_variables" >&6; }
+-if test $am_cv_make_support_nested_variables = yes; then
+-    AM_V='$(V)'
+-  AM_DEFAULT_V='$(AM_DEFAULT_VERBOSITY)'
+-else
+-  AM_V=$AM_DEFAULT_VERBOSITY
+-  AM_DEFAULT_V=$AM_DEFAULT_VERBOSITY
+-fi
+ AM_BACKSLASH='\'
+ 
++am__rm_f_notfound=
++if (rm -f && rm -fr && rm -rf) 2>/dev/null
++then :
++
++else $as_nop
++  am__rm_f_notfound='""'
++fi
++
++
++{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking xargs -n works" >&5
++printf %s "checking xargs -n works... " >&6; }
++if test ${am_cv_xargs_n_works+y}
++then :
++  printf %s "(cached) " >&6
++else $as_nop
++  if test "`echo 1 2 3 | xargs -n2 echo`" = "1 2
++3"
++then :
++  am_cv_xargs_n_works=yes
++else $as_nop
++  am_cv_xargs_n_works=no
++fi
++fi
++{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $am_cv_xargs_n_works" >&5
++printf "%s\n" "$am_cv_xargs_n_works" >&6; }
++if test "$am_cv_xargs_n_works" = yes
++then :
++  am__xargs_n='xargs -n'
++else $as_nop
++    am__xargs_n='am__xargs_n () { shift; sed "s/ /\\n/g" | while read am__xargs_n_arg; do "" "$am__xargs_n_arg"; done; }'
++
++fi
++
+ if test "`cd $srcdir && pwd`" != "`pwd`"; then
+   # Use -I$(srcdir) only when $(srcdir) != ., so that make's output
+   # is not polluted with repeated "-I."
+@@ -3461,47 +3638,9 @@ fi
+ 
+ 
+ 
+-# POSIX will say in a future version that running "rm -f" with no argument
+-# is OK; and we want to be able to make that assumption in our Makefile
+-# recipes.  So use an aggressive probe to check that the usage we want is
+-# actually supported "in the wild" to an acceptable degree.
+-# See automake bug#10828.
+-# To make any issue more visible, cause the running configure to be aborted
+-# by default if the 'rm' program in use doesn't match our expectations; the
+-# user can still override this though.
+-if rm -f && rm -fr && rm -rf; then : OK; else
+-  cat >&2 <<'END'
+-Oops!
+ 
+-Your 'rm' program seems unable to run without file operands specified
+-on the command line, even when the '-f' option is present.  This is contrary
+-to the behaviour of most rm programs out there, and not conforming with
+-the upcoming POSIX standard: <http://austingroupbugs.net/view.php?id=542>
+ 
+-Please tell bug-automake@gnu.org about your system, including the value
+-of your $PATH and any error possibly output before this message.  This
+-can help us improve future automake versions.
+ 
+-END
+-  if test x"$ACCEPT_INFERIOR_RM_PROGRAM" = x"yes"; then
+-    echo 'Configuration will proceed anyway, since you have set the' >&2
+-    echo 'ACCEPT_INFERIOR_RM_PROGRAM variable to "yes"' >&2
+-    echo >&2
+-  else
+-    cat >&2 <<'END'
+-Aborting the configuration process, to ensure you take notice of the issue.
+-
+-You can download and install GNU coreutils to get an 'rm' implementation
+-that behaves properly: <https://www.gnu.org/software/coreutils/>.
+-
+-If you want to complete the configuration process using your problematic
+-'rm' anyway, export the environment variable ACCEPT_INFERIOR_RM_PROGRAM
+-to "yes", and re-run configure.
+-
+-END
+-    as_fn_error $? "Your 'rm' program is bad, sorry." "$LINENO" 5
+-  fi
+-fi
+ 
+ 
+ # ----------------------------------------------------------------------
+@@ -3553,6 +3692,12 @@ solaris*)
+ 
+ printf "%s\n" "#define HTOP_SOLARIS /**/" >>confdefs.h
+ 
++   ;;
++openedition*)
++   my_htop_platform=zos
++
++printf "%s\n" "#define HTOP_ZOS /**/" >>confdefs.h
++
+    ;;
+ *)
+    my_htop_platform=unsupported
+@@ -4298,7 +4443,7 @@ fi
+ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $cross_compiling" >&5
+ printf "%s\n" "$cross_compiling" >&6; }
+ 
+-rm -f conftest.$ac_ext conftest$ac_cv_exeext conftest.out
++rm -f conftest.$ac_ext conftest$ac_cv_exeext conftest.out conftest.o
+ ac_clean_files=$ac_clean_files_save
+ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for suffix of object files" >&5
+ printf %s "checking for suffix of object files... " >&6; }
+@@ -4379,7 +4524,7 @@ then :
+ else $as_nop
+   ac_compiler_gnu=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+ ac_cv_c_compiler_gnu=$ac_compiler_gnu
+ 
+ fi
+@@ -4452,11 +4597,11 @@ if ac_fn_c_try_compile "$LINENO"
+ then :
+   ac_cv_prog_cc_g=yes
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+    ac_c_werror_flag=$ac_save_c_werror_flag
+ fi
+ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_prog_cc_g" >&5
+@@ -4498,7 +4643,7 @@ do
+ then :
+   ac_cv_prog_cc_c11=$ac_arg
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam
+   test "x$ac_cv_prog_cc_c11" != "xno" && break
+ done
+ rm -f conftest.$ac_ext
+@@ -4544,7 +4689,7 @@ do
+ then :
+   ac_cv_prog_cc_c99=$ac_arg
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam
+   test "x$ac_cv_prog_cc_c99" != "xno" && break
+ done
+ rm -f conftest.$ac_ext
+@@ -4590,7 +4735,7 @@ do
+ then :
+   ac_cv_prog_cc_c89=$ac_arg
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam
+   test "x$ac_cv_prog_cc_c89" != "xno" && break
+ done
+ rm -f conftest.$ac_ext
+@@ -4778,7 +4923,7 @@ else $as_nop
+       # icc doesn't choke on unknown options, it will just issue warnings
+       # or remarks (even with -Werror).  So we grep stderr for any message
+       # that says an option was ignored or not supported.
+-      # When given -MP, icc 7.0 and 7.1 complain thusly:
++      # When given -MP, icc 7.0 and 7.1 complain thus:
+       #   icc: Command line warning: ignoring option '-M'; no argument required
+       # The diagnosis changed in icc 8.0:
+       #   icc: Command line remark: option '-MP' not supported
+@@ -4873,7 +5018,7 @@ then :
+ else $as_nop
+   ac_cv_safe_to_define___extensions__=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+ fi
+ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_safe_to_define___extensions__" >&5
+ printf "%s\n" "$ac_cv_safe_to_define___extensions__" >&6; }
+@@ -4922,9 +5067,9 @@ if ac_fn_c_try_compile "$LINENO"
+ then :
+   ac_cv_should_define__xopen_source=yes
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+ fi
+ fi
+ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_should_define__xopen_source" >&5
+@@ -5028,13 +5173,13 @@ _ACEOF
+ then :
+   break
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam
+ 	 CC="$CC -n32"
+ 	 if ac_fn_c_try_compile "$LINENO"
+ then :
+   ac_cv_sys_largefile_CC=' -n32'; break
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam
+ 	 break
+        done
+        CC=$ac_save_CC
+@@ -5077,7 +5222,7 @@ if ac_fn_c_try_compile "$LINENO"
+ then :
+   ac_cv_sys_file_offset_bits=no; break
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ #define _FILE_OFFSET_BITS 64
+@@ -5102,7 +5247,7 @@ if ac_fn_c_try_compile "$LINENO"
+ then :
+   ac_cv_sys_file_offset_bits=64; break
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+   ac_cv_sys_file_offset_bits=unknown
+   break
+ done
+@@ -5147,7 +5292,7 @@ if ac_fn_c_try_compile "$LINENO"
+ then :
+   ac_cv_sys_large_files=no; break
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ #define _LARGE_FILES 1
+@@ -5172,7 +5317,7 @@ if ac_fn_c_try_compile "$LINENO"
+ then :
+   ac_cv_sys_large_files=1; break
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+   ac_cv_sys_large_files=unknown
+   break
+ done
+@@ -5685,7 +5830,7 @@ then :
+ else $as_nop
+   ac_compiler_gnu=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+ ac_cv_c_compiler_gnu=$ac_compiler_gnu
+ 
+ fi
+@@ -5758,11 +5903,11 @@ if ac_fn_c_try_compile "$LINENO"
+ then :
+   ac_cv_prog_cc_g=yes
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+    ac_c_werror_flag=$ac_save_c_werror_flag
+ fi
+ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_prog_cc_g" >&5
+@@ -5804,7 +5949,7 @@ do
+ then :
+   ac_cv_prog_cc_c11=$ac_arg
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam
+   test "x$ac_cv_prog_cc_c11" != "xno" && break
+ done
+ rm -f conftest.$ac_ext
+@@ -5850,7 +5995,7 @@ do
+ then :
+   ac_cv_prog_cc_c99=$ac_arg
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam
+   test "x$ac_cv_prog_cc_c99" != "xno" && break
+ done
+ rm -f conftest.$ac_ext
+@@ -5896,7 +6041,7 @@ do
+ then :
+   ac_cv_prog_cc_c89=$ac_arg
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam
+   test "x$ac_cv_prog_cc_c89" != "xno" && break
+ done
+ rm -f conftest.$ac_ext
+@@ -6084,7 +6229,7 @@ else $as_nop
+       # icc doesn't choke on unknown options, it will just issue warnings
+       # or remarks (even with -Werror).  So we grep stderr for any message
+       # that says an option was ignored or not supported.
+-      # When given -MP, icc 7.0 and 7.1 complain thusly:
++      # When given -MP, icc 7.0 and 7.1 complain thus:
+       #   icc: Command line warning: ignoring option '-M'; no argument required
+       # The diagnosis changed in icc 8.0:
+       #   icc: Command line remark: option '-MP' not supported
+@@ -6220,7 +6365,7 @@ do
+ then :
+   ac_cv_search_pmNewContext=$ac_res
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext
+   if test ${ac_cv_search_pmNewContext+y}
+ then :
+@@ -6294,7 +6439,7 @@ then :
+ else $as_nop
+   eval "$as_ac_Header=no"
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+ fi
+ eval ac_res=\$$as_ac_Header
+ 	       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+@@ -6345,7 +6490,7 @@ do
+ then :
+   ac_cv_search_opendir=$ac_res
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext
+   if test ${ac_cv_search_opendir+y}
+ then :
+@@ -6405,7 +6550,7 @@ do
+ then :
+   ac_cv_search_opendir=$ac_res
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext
+   if test ${ac_cv_search_opendir+y}
+ then :
+@@ -6522,7 +6667,7 @@ then :
+ else $as_nop
+   ac_cv_type_mbstate_t=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+ fi
+ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_type_mbstate_t" >&5
+ printf "%s\n" "$ac_cv_type_mbstate_t" >&6; }
+@@ -6584,7 +6729,7 @@ then :
+ else $as_nop
+   ac_pid_type='__int64'
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+ 
+ printf "%s\n" "#define pid_t $ac_pid_type" >>confdefs.h
+ 
+@@ -6988,7 +7133,7 @@ else $as_nop
+   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+ printf "%s\n" "no" >&6; }
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+ CFLAGS="$old_CFLAGS"
+ 
+ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for access" >&5
+@@ -7013,7 +7158,7 @@ else $as_nop
+   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+ printf "%s\n" "no" >&6; }
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+ CFLAGS="$old_CFLAGS"
+ 
+ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for nonnull" >&5
+@@ -7041,7 +7186,7 @@ else $as_nop
+   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+ printf "%s\n" "no" >&6; }
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+ CFLAGS="$old_CFLAGS"
+ 
+ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for NaN support" >&5
+@@ -7086,7 +7231,7 @@ printf "%s\n" "assume yes (cross compiling)" >&6; }
+ else $as_nop
+   flag_finite_math_only=yes
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+    elif ./conftest$EXEEXT >&5; then
+       flag_finite_math_only=no
+       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+@@ -7105,7 +7250,7 @@ else $as_nop
+ printf "%s\n" "no" >&6; }
+    as_fn_error $? "can not find required macros: NAN, isgreater() and isgreaterequal()" "$LINENO" 5
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ 
+ # ----------------------------------------------------------------------
+@@ -7149,7 +7294,7 @@ do
+ then :
+   ac_cv_search_ceil=$ac_res
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext
+   if test ${ac_cv_search_ceil+y}
+ then :
+@@ -7212,7 +7357,7 @@ do
+ then :
+   ac_cv_search_kvm_open=$ac_res
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext
+   if test ${ac_cv_search_kvm_open+y}
+ then :
+@@ -7277,7 +7422,7 @@ do
+ then :
+   ac_cv_search_elf_version=$ac_res
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext
+   if test ${ac_cv_search_elf_version+y}
+ then :
+@@ -7339,7 +7484,7 @@ do
+ then :
+   ac_cv_search_kvm_open=$ac_res
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext
+   if test ${ac_cv_search_kvm_open+y}
+ then :
+@@ -7400,7 +7545,7 @@ do
+ then :
+   ac_cv_search_devstat_checkversion=$ac_res
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext
+   if test ${ac_cv_search_devstat_checkversion+y}
+ then :
+@@ -7465,7 +7610,7 @@ do
+ then :
+   ac_cv_search_dlopen=$ac_res
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext
+   if test ${ac_cv_search_dlopen+y}
+ then :
+@@ -7530,7 +7675,7 @@ do
+ then :
+   ac_cv_search_kvm_open=$ac_res
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext
+   if test ${ac_cv_search_kvm_open+y}
+ then :
+@@ -7591,7 +7736,7 @@ do
+ then :
+   ac_cv_search_prop_dictionary_get=$ac_res
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext
+   if test ${ac_cv_search_prop_dictionary_get+y}
+ then :
+@@ -7655,7 +7800,7 @@ do
+ then :
+   ac_cv_search_kvm_open=$ac_res
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext
+   if test ${ac_cv_search_kvm_open+y}
+ then :
+@@ -7719,7 +7864,7 @@ do
+ then :
+   ac_cv_search_kstat_open=$ac_res
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext
+   if test ${ac_cv_search_kstat_open+y}
+ then :
+@@ -7780,7 +7925,7 @@ do
+ then :
+   ac_cv_search_Pgrab_error=$ac_res
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext
+   if test ${ac_cv_search_Pgrab_error+y}
+ then :
+@@ -7841,7 +7986,7 @@ do
+ then :
+   ac_cv_search_free=$ac_res
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext
+   if test ${ac_cv_search_free+y}
+ then :
+@@ -7906,7 +8051,7 @@ do
+ then :
+   ac_cv_search_clock_gettime=$ac_res
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext
+   if test ${ac_cv_search_clock_gettime+y}
+ then :
+@@ -8067,9 +8212,9 @@ else $as_nop
+ fi
+           break
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+     done
+     CFLAGS=$ac_save_CFLAGS
+ 
+@@ -8150,7 +8295,7 @@ then :
+ else $as_nop
+   ac_cv_lib_systemd_sd_bus_open_system=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ LIBS=$ac_check_lib_save_LIBS
+ fi
+@@ -8232,7 +8377,7 @@ then :
+ else $as_nop
+   ac_cv_lib_ncursesw6_waddwstr=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ LIBS=$ac_check_lib_save_LIBS
+ fi
+@@ -8299,7 +8444,7 @@ then :
+ else $as_nop
+   ac_cv_lib_ncursesw_waddwstr=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ LIBS=$ac_check_lib_save_LIBS
+ fi
+@@ -8366,7 +8511,7 @@ then :
+ else $as_nop
+   ac_cv_lib_ncursesw_wadd_wch=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ LIBS=$ac_check_lib_save_LIBS
+ fi
+@@ -8433,7 +8578,7 @@ then :
+ else $as_nop
+   ac_cv_lib_ncurses_wadd_wch=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ LIBS=$ac_check_lib_save_LIBS
+ fi
+@@ -8486,7 +8631,7 @@ then :
+ else $as_nop
+   ac_cv_lib_ncursesw6_addnwstr=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ LIBS=$ac_check_lib_save_LIBS
+ fi
+@@ -8531,7 +8676,7 @@ then :
+ else $as_nop
+   ac_cv_lib_ncursesw_addnwstr=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ LIBS=$ac_check_lib_save_LIBS
+ fi
+@@ -8576,7 +8721,7 @@ then :
+ else $as_nop
+   ac_cv_lib_ncurses_addnwstr=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ LIBS=$ac_check_lib_save_LIBS
+ fi
+@@ -8728,7 +8873,7 @@ do
+ then :
+   ac_cv_search_keypad=$ac_res
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext
+   if test ${ac_cv_search_keypad+y}
+ then :
+@@ -8798,7 +8943,7 @@ then :
+ else $as_nop
+   ac_cv_lib_ncurses6_wnoutrefresh=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ LIBS=$ac_check_lib_save_LIBS
+ fi
+@@ -8865,7 +9010,7 @@ then :
+ else $as_nop
+   ac_cv_lib_ncurses_wnoutrefresh=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ LIBS=$ac_check_lib_save_LIBS
+ fi
+@@ -8918,7 +9063,7 @@ then :
+ else $as_nop
+   ac_cv_lib_ncurses6_doupdate=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ LIBS=$ac_check_lib_save_LIBS
+ fi
+@@ -8963,7 +9108,7 @@ then :
+ else $as_nop
+   ac_cv_lib_ncurses_doupdate=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ LIBS=$ac_check_lib_save_LIBS
+ fi
+@@ -9008,7 +9153,7 @@ then :
+ else $as_nop
+   ac_cv_lib_curses_doupdate=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ LIBS=$ac_check_lib_save_LIBS
+ fi
+@@ -9145,7 +9290,7 @@ do
+ then :
+   ac_cv_search_keypad=$ac_res
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext
+   if test ${ac_cv_search_keypad+y}
+ then :
+@@ -9207,7 +9352,7 @@ do
+ then :
+   ac_cv_search_Gpm_GetEvent=$ac_res
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext
+   if test ${ac_cv_search_Gpm_GetEvent+y}
+ then :
+@@ -9306,7 +9451,7 @@ else $as_nop
+ printf "%s\n" "no" >&6; }
+ fi
+ rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+-  conftest.$ac_objext conftest.beam conftest.$ac_ext
++  conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+ fi
+ 
+    fi
+@@ -9362,7 +9507,7 @@ then :
+ else $as_nop
+   ac_cv_lib_lzma_lzma_index_buffer_decode=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ LIBS=$ac_check_lib_save_LIBS
+ fi
+@@ -9406,7 +9551,7 @@ then :
+ else $as_nop
+   ac_cv_lib_unwind_backtrace=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ LIBS=$ac_check_lib_save_LIBS
+ fi
+@@ -9485,7 +9630,7 @@ then :
+ else $as_nop
+   ac_cv_lib_unwind_backtrace=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ LIBS=$ac_check_lib_save_LIBS
+ fi
+@@ -9568,7 +9713,7 @@ do
+ then :
+   ac_cv_search_backtrace=$ac_res
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext
+   if test ${ac_cv_search_backtrace+y}
+ then :
+@@ -9791,12 +9936,12 @@ else
+         _pkg_short_errors_supported=no
+ fi
+         if test $_pkg_short_errors_supported = yes; then
+-                HWLOC_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "hwloc" 2>&1`
++	        HWLOC_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "hwloc" 2>&1`
+         else
+-                HWLOC_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "hwloc" 2>&1`
++	        HWLOC_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "hwloc" 2>&1`
+         fi
+-        # Put the nasty error message in config.log where it belongs
+-        echo "$HWLOC_PKG_ERRORS" >&5
++	# Put the nasty error message in config.log where it belongs
++	echo "$HWLOC_PKG_ERRORS" >&5
+ 
+ 
+                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for hwloc_get_proc_cpubind in -lhwloc" >&5
+@@ -9828,7 +9973,7 @@ then :
+ else $as_nop
+   ac_cv_lib_hwloc_hwloc_get_proc_cpubind=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ LIBS=$ac_check_lib_save_LIBS
+ fi
+@@ -9890,7 +10035,7 @@ then :
+ else $as_nop
+   ac_cv_lib_hwloc_hwloc_get_proc_cpubind=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ LIBS=$ac_check_lib_save_LIBS
+ fi
+@@ -9920,8 +10065,8 @@ fi
+ done
+ 
+ else
+-        HWLOC_CFLAGS=$pkg_cv_HWLOC_CFLAGS
+-        HWLOC_LIBS=$pkg_cv_HWLOC_LIBS
++	HWLOC_CFLAGS=$pkg_cv_HWLOC_CFLAGS
++	HWLOC_LIBS=$pkg_cv_HWLOC_LIBS
+         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+ printf "%s\n" "yes" >&6; }
+ 
+@@ -10075,7 +10220,7 @@ then :
+ else $as_nop
+   ac_cv_lib_cap_cap_init=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ LIBS=$ac_check_lib_save_LIBS
+ fi
+@@ -10134,7 +10279,7 @@ then :
+ else $as_nop
+   ac_cv_lib_cap_cap_init=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ LIBS=$ac_check_lib_save_LIBS
+ fi
+@@ -10370,21 +10515,21 @@ else
+         _pkg_short_errors_supported=no
+ fi
+         if test $_pkg_short_errors_supported = yes; then
+-                LIBNL3_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libnl-3.0" 2>&1`
++	        LIBNL3_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libnl-3.0" 2>&1`
+         else
+-                LIBNL3_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libnl-3.0" 2>&1`
++	        LIBNL3_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libnl-3.0" 2>&1`
+         fi
+-        # Put the nasty error message in config.log where it belongs
+-        echo "$LIBNL3_PKG_ERRORS" >&5
++	# Put the nasty error message in config.log where it belongs
++	echo "$LIBNL3_PKG_ERRORS" >&5
+ 
+-        enable_delayacct=no
++	enable_delayacct=no
+ elif test $pkg_failed = untried; then
+         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+ printf "%s\n" "no" >&6; }
+-        enable_delayacct=no
++	enable_delayacct=no
+ else
+-        LIBNL3_CFLAGS=$pkg_cv_LIBNL3_CFLAGS
+-        LIBNL3_LIBS=$pkg_cv_LIBNL3_LIBS
++	LIBNL3_CFLAGS=$pkg_cv_LIBNL3_CFLAGS
++	LIBNL3_LIBS=$pkg_cv_LIBNL3_LIBS
+         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+ printf "%s\n" "yes" >&6; }
+ 
+@@ -10441,21 +10586,21 @@ else
+         _pkg_short_errors_supported=no
+ fi
+         if test $_pkg_short_errors_supported = yes; then
+-                LIBNL3GENL_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libnl-genl-3.0" 2>&1`
++	        LIBNL3GENL_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libnl-genl-3.0" 2>&1`
+         else
+-                LIBNL3GENL_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libnl-genl-3.0" 2>&1`
++	        LIBNL3GENL_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libnl-genl-3.0" 2>&1`
+         fi
+-        # Put the nasty error message in config.log where it belongs
+-        echo "$LIBNL3GENL_PKG_ERRORS" >&5
++	# Put the nasty error message in config.log where it belongs
++	echo "$LIBNL3GENL_PKG_ERRORS" >&5
+ 
+-        enable_delayacct=no
++	enable_delayacct=no
+ elif test $pkg_failed = untried; then
+         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+ printf "%s\n" "no" >&6; }
+-        enable_delayacct=no
++	enable_delayacct=no
+ else
+-        LIBNL3GENL_CFLAGS=$pkg_cv_LIBNL3GENL_CFLAGS
+-        LIBNL3GENL_LIBS=$pkg_cv_LIBNL3GENL_LIBS
++	LIBNL3GENL_CFLAGS=$pkg_cv_LIBNL3GENL_CFLAGS
++	LIBNL3GENL_LIBS=$pkg_cv_LIBNL3GENL_LIBS
+         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+ printf "%s\n" "yes" >&6; }
+ 
+@@ -10654,21 +10799,21 @@ else
+         _pkg_short_errors_supported=no
+ fi
+         if test $_pkg_short_errors_supported = yes; then
+-                LIBNL3_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libnl-3.0" 2>&1`
++	        LIBNL3_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libnl-3.0" 2>&1`
+         else
+-                LIBNL3_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libnl-3.0" 2>&1`
++	        LIBNL3_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libnl-3.0" 2>&1`
+         fi
+-        # Put the nasty error message in config.log where it belongs
+-        echo "$LIBNL3_PKG_ERRORS" >&5
++	# Put the nasty error message in config.log where it belongs
++	echo "$LIBNL3_PKG_ERRORS" >&5
+ 
+-        as_fn_error $? "can not find required library libnl3" "$LINENO" 5
++	as_fn_error $? "can not find required library libnl3" "$LINENO" 5
+ elif test $pkg_failed = untried; then
+         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+ printf "%s\n" "no" >&6; }
+-        as_fn_error $? "can not find required library libnl3" "$LINENO" 5
++	as_fn_error $? "can not find required library libnl3" "$LINENO" 5
+ else
+-        LIBNL3_CFLAGS=$pkg_cv_LIBNL3_CFLAGS
+-        LIBNL3_LIBS=$pkg_cv_LIBNL3_LIBS
++	LIBNL3_CFLAGS=$pkg_cv_LIBNL3_CFLAGS
++	LIBNL3_LIBS=$pkg_cv_LIBNL3_LIBS
+         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+ printf "%s\n" "yes" >&6; }
+ 
+@@ -10725,21 +10870,21 @@ else
+         _pkg_short_errors_supported=no
+ fi
+         if test $_pkg_short_errors_supported = yes; then
+-                LIBNL3GENL_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libnl-genl-3.0" 2>&1`
++	        LIBNL3GENL_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libnl-genl-3.0" 2>&1`
+         else
+-                LIBNL3GENL_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libnl-genl-3.0" 2>&1`
++	        LIBNL3GENL_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libnl-genl-3.0" 2>&1`
+         fi
+-        # Put the nasty error message in config.log where it belongs
+-        echo "$LIBNL3GENL_PKG_ERRORS" >&5
++	# Put the nasty error message in config.log where it belongs
++	echo "$LIBNL3GENL_PKG_ERRORS" >&5
+ 
+-        as_fn_error $? "can not find required library libnl3genl" "$LINENO" 5
++	as_fn_error $? "can not find required library libnl3genl" "$LINENO" 5
+ elif test $pkg_failed = untried; then
+         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+ printf "%s\n" "no" >&6; }
+-        as_fn_error $? "can not find required library libnl3genl" "$LINENO" 5
++	as_fn_error $? "can not find required library libnl3genl" "$LINENO" 5
+ else
+-        LIBNL3GENL_CFLAGS=$pkg_cv_LIBNL3GENL_CFLAGS
+-        LIBNL3GENL_LIBS=$pkg_cv_LIBNL3GENL_LIBS
++	LIBNL3GENL_CFLAGS=$pkg_cv_LIBNL3GENL_CFLAGS
++	LIBNL3GENL_LIBS=$pkg_cv_LIBNL3GENL_LIBS
+         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+ printf "%s\n" "yes" >&6; }
+ 
+@@ -10800,7 +10945,7 @@ then :
+ else $as_nop
+   ac_cv_lib_sensors_sensors_init=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ LIBS=$ac_check_lib_save_LIBS
+ fi
+@@ -10861,7 +11006,7 @@ then :
+ else $as_nop
+   ac_cv_lib_sensors_sensors_init=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam \
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam \
+     conftest$ac_exeext conftest.$ac_ext
+ LIBS=$ac_check_lib_save_LIBS
+ fi
+@@ -10954,7 +11099,7 @@ then :
+ else $as_nop
+   ax_cv_check_cflags__Werror_unknown_warning_option__Wextra_semi_stmt=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+    CFLAGS=$ax_check_save_flags
+ fi
+ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cflags__Werror_unknown_warning_option__Wextra_semi_stmt" >&5
+@@ -10992,7 +11137,7 @@ then :
+ else $as_nop
+   ax_cv_check_cflags__Werror__Wimplicit_int_conversion=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+    CFLAGS=$ax_check_save_flags
+ fi
+ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cflags__Werror__Wimplicit_int_conversion" >&5
+@@ -11031,7 +11176,7 @@ then :
+ else $as_nop
+   ax_cv_check_cflags__Werror__Wnull_dereference=no
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+    CFLAGS=$ax_check_save_flags
+ fi
+ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cflags__Werror__Wnull_dereference" >&5
+@@ -11090,7 +11235,7 @@ else $as_nop
+ printf "%s\n" "$as_me: WARNING: $warning_msg" >&2;}
+ 
+ fi
+-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
++rm -f core conftest.err conftest.$ac_objext conftest.dbg conftest.beam conftest.$ac_ext
+ else
+    AM_CPPFLAGS="$AM_CPPFLAGS -ggdb3"
+ fi
+@@ -11166,6 +11311,14 @@ else
+   HTOP_SOLARIS_FALSE=
+ fi
+ 
++ if test "$my_htop_platform" = zos; then
++  HTOP_ZOS_TRUE=
++  HTOP_ZOS_FALSE='#'
++else
++  HTOP_ZOS_TRUE='#'
++  HTOP_ZOS_FALSE=
++fi
++
+  if test "$my_htop_platform" = pcp; then
+   HTOP_PCP_TRUE=
+   HTOP_PCP_FALSE='#'
+@@ -11219,7 +11372,7 @@ printf "%s\n" "$as_me: WARNING: cache variable $ac_var contains a newline" >&2;}
+       case $ac_var in #(
+       _ | IFS | as_nl) ;; #(
+       BASH_ARGV | BASH_SOURCE) eval $ac_var= ;; #(
+-      *) { eval $ac_var=; unset $ac_var;} ;;
++      *) { eval  unset $ac_var;} ;;
+       esac ;;
+     esac
+   done
+@@ -11303,6 +11456,18 @@ printf %s "checking that generated files are newer than configure... " >&6; }
+    fi
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: done" >&5
+ printf "%s\n" "done" >&6; }
++case $enable_silent_rules in # (((
++  yes) AM_DEFAULT_VERBOSITY=0;;
++   no) AM_DEFAULT_VERBOSITY=1;;
++esac
++if test $am_cv_make_support_nested_variables = yes; then
++    AM_V='$(V)'
++  AM_DEFAULT_V='$(AM_DEFAULT_VERBOSITY)'
++else
++  AM_V=$AM_DEFAULT_VERBOSITY
++  AM_DEFAULT_V=$AM_DEFAULT_VERBOSITY
++fi
++
+  if test -n "$EXEEXT"; then
+   am__EXEEXT_TRUE=
+   am__EXEEXT_FALSE='#'
+@@ -11351,6 +11516,10 @@ if test -z "${HTOP_SOLARIS_TRUE}" && test -z "${HTOP_SOLARIS_FALSE}"; then
+   as_fn_error $? "conditional \"HTOP_SOLARIS\" was never defined.
+ Usually this means the macro was only invoked conditionally." "$LINENO" 5
+ fi
++if test -z "${HTOP_ZOS_TRUE}" && test -z "${HTOP_ZOS_FALSE}"; then
++  as_fn_error $? "conditional \"HTOP_ZOS\" was never defined.
++Usually this means the macro was only invoked conditionally." "$LINENO" 5
++fi
+ if test -z "${HTOP_PCP_TRUE}" && test -z "${HTOP_PCP_FALSE}"; then
+   as_fn_error $? "conditional \"HTOP_PCP\" was never defined.
+ Usually this means the macro was only invoked conditionally." "$LINENO" 5
+@@ -11527,7 +11696,7 @@ as_fn_exit ()
+ # Portably unset VAR.
+ as_fn_unset ()
+ {
+-  { eval $1=; unset $1;}
++  { eval  unset $1;}
+ }
+ as_unset=as_fn_unset
+ 
+@@ -11981,7 +12150,7 @@ $debug ||
+   : "${ac_tmp:=$tmp}"
+   { test ! -d "$ac_tmp" || rm -fr "$ac_tmp"; } && exit $exit_status
+ ' 0
+-  trap 'as_fn_exit 1' 1 2 13 15
++  trap 'as_fn_exit 1' HUP INT PIPE TERM
+ }
+ # Create a (secure) tmp directory for tmp files.
+ 
+@@ -12636,10 +12805,10 @@ as_fn_error $? "Something went wrong bootstrapping makefile fragments
+     the package (albeit without support for automatic dependency tracking).
+ See \`config.log' for more details" "$LINENO" 5; }
+   fi
+-  { am_dirpart=; unset am_dirpart;}
+-  { am_filepart=; unset am_filepart;}
+-  { am_mf=; unset am_mf;}
+-  { am_rc=; unset am_rc;}
++  {  unset am_dirpart;}
++  {  unset am_filepart;}
++  {  unset am_mf;}
++  {  unset am_rc;}
+   rm -f conftest-deps.mk
+ }
+  ;;

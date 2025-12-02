@@ -1,0 +1,134 @@
+diff --git c/zos/ZOSProcessTable.c w/zos/ZOSProcessTable.c
+new file mode 100644
+index 0000000..3474033
+--- /dev/null
++++ w/zos/ZOSProcessTable.c
+@@ -0,0 +1,128 @@
++/*
++htop - ZOSProcessTable.c
++(C) 2014 Hisham H. Muhammad
++(C) 2017,2018 Guy M. Broome
++Released under the GNU GPLv2+, see the COPYING file
++in the source distribution for its full text.
++*/
++
++#include "config.h" // IWYU pragma: keep
++
++#include "zos/ZOSProcessTable.h"
++
++#include <unistd.h>
++#include <stdlib.h>
++#include <sys/types.h>
++#include <limits.h>
++#include <string.h>
++#include <errno.h>
++#include <pwd.h>
++#include <math.h>
++#include <time.h>
++
++#include "CRT.h"
++#include "zos/Platform.h"
++#include "zos/ZOSProcess.h"
++
++
++#define GZONE "global    "
++#define UZONE "unknown   "
++
++ProcessTable* ProcessTable_new(Machine* host, Hashtable* pidMatchList) {
++   ZOSProcessTable* this = xCalloc(1, sizeof(ZOSProcessTable));
++   Object_setClass(this, Class(ProcessTable));
++
++   ProcessTable* super = &this->super;
++   ProcessTable_init(super, Class(ZOSProcess), host, pidMatchList);
++
++   return super;
++}
++
++void ProcessTable_delete(Object* cast) {
++   ZOSProcessTable* this = (ZOSProcessTable*) cast;
++   ProcessTable_done(&this->super);
++   free(this);
++}
++
++static void ZOSProcessTable_updateExe(pid_t pid, Process* proc) {
++   char path[32];
++   xSnprintf(path, sizeof(path), "/proc/%d/path/a.out", pid);
++
++   char target[PATH_MAX];
++   ssize_t ret = readlink(path, target, sizeof(target) - 1);
++   if (ret <= 0)
++      return;
++
++   target[ret] = '\0';
++   Process_updateExe(proc, target);
++}
++
++static void ZOSProcessTable_updateCwd(pid_t pid, Process* proc) {
++   char path[32];
++   xSnprintf(path, sizeof(path), "/proc/%d/cwd", pid);
++
++   char target[PATH_MAX];
++   ssize_t ret = readlink(path, target, sizeof(target) - 1);
++   if (ret <= 0)
++      return;
++
++   target[ret] = '\0';
++   free_and_xStrdup(&proc->procCwd, target);
++}
++
++/* Taken from: https://docs.oracle.com/cd/E19253-01/817-6223/6mlkidlom/index.html#tbl-sched-state */
++static inline ProcessState ZOSProcessTable_getProcessState(char state) {
++   switch (state) {
++      case 'S': return SLEEPING;
++      case 'R': return RUNNABLE;
++      case 'O': return RUNNING;
++      case 'Z': return ZOMBIE;
++      case 'T': return STOPPED;
++      case 'I': return IDLE;
++      default: return UNKNOWN;
++   }
++}
++
++/* NOTE: the following is a callback function of type proc_walk_f
++ *       and MUST conform to the appropriate definition in order
++ *       to work.  See libproc(3LIB) on a ZOS or Illumos
++ *       system for more info.
++ */
++
++static int ZOSProcessTable_walkproc(void* listptr) {
++   bool preExisting;
++   pid_t getpid;
++
++   // Setup process list
++   ProcessTable* pt = (ProcessTable*) listptr;
++   ZOSProcessTable* spt = (ZOSProcessTable*) listptr;
++   //Machine* host = pt->host;
++
++   Process* proc            = ProcessTable_getProcess(pt, getpid, &preExisting, ZOSProcess_new);
++   ZOSProcess* sproc    = (ZOSProcess*) proc;
++   //const Settings* settings = host->settings;
++
++   // Common code pass 1
++   //proc->show               = false;
++   //proc->priority           = _lwpsinfo->pr_pri;
++   //proc->nice               = _lwpsinfo->pr_nice - NZERO;
++   //proc->processor          = _lwpsinfo->pr_onpro;
++   //proc->state              = ZOSProcessTable_getProcessState(_lwpsinfo->pr_sname);
++   // NOTE: This 'percentage' is a 16-bit BINARY FRACTIONS where 1.0 = 0x8000
++   // Source: https://docs.oracle.com/cd/E19253-01/816-5174/proc-4/index.html
++   // (accessed on 18 November 2017)
++   //proc->percent_mem        = ((uint16_t)_psinfo->pr_pctmem / (double)32768) * (double)100.0;
++   //proc->pgrp               = _psinfo->pr_pgid;
++   //proc->nlwp               = _psinfo->pr_nlwp;
++   //proc->session            = _psinfo->pr_sid;
++
++   //proc->tty_nr             = _psinfo->pr_ttydev;
++
++  //TODO: grab teh rest from solaris
++   return 0;
++}
++
++void ProcessTable_goThroughEntries(ProcessTable* super) {
++   super->kernelThreads = 1;
++   //proc_walk(&ZOSProcessTable_walkproc, super, PR_WALK_LWP);
++}

@@ -1,0 +1,34 @@
+diff --git c/zos/ZOSProcessTable.h w/zos/ZOSProcessTable.h
+new file mode 100644
+index 0000000..ade3e9c
+--- /dev/null
++++ w/zos/ZOSProcessTable.h
+@@ -0,0 +1,28 @@
++#ifndef HEADER_ZOSProcessTable
++#define HEADER_ZOSProcessTable
++/*
++htop - ZOSProcessTable.h
++(C) 2014 Hisham H. Muhammad
++(C) 2017,2018 Guy M. Broome
++Released under the GNU GPLv2+, see the COPYING file
++in the source distribution for its full text.
++*/
++
++#include <stdbool.h>
++#include <stdint.h>
++#include <sys/param.h>
++#include <sys/uio.h>
++#include <sys/resource.h>
++
++#include "Hashtable.h"
++#include "ProcessTable.h"
++#include "UsersTable.h"
++
++#include "zos/ZOSProcess.h"
++
++
++typedef struct ZOSProcessTable_ {
++   ProcessTable super;
++} ZOSProcessTable;
++
++#endif
