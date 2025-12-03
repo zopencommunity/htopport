@@ -1,0 +1,1773 @@
+diff --git c/Makefile.am w/Makefile.am
+index ed92afa..01b2cb4 100644
+--- c/Makefile.am
++++ w/Makefile.am
+@@ -408,6 +408,33 @@ myhtopplatheaders = $(solaris_platform_headers)
+ myhtopplatsources = $(solaris_platform_sources)
+ endif
+ 
++# z/OS
++# -------
++
++zos_platform_headers = \
++	generic/gettime.h \
++	generic/hostname.h \
++	generic/uname.h \
++	zos/ProcessField.h \
++	zos/Platform.h \
++	zos/ZOSMachine.h \
++	zos/ZOSProcess.h \
++	zos/ZOSProcessTable.h
++
++zos_platform_sources = \
++	generic/gettime.c \
++	generic/hostname.c \
++	generic/uname.c \
++	zos/Platform.c \
++	zos/ZOSMachine.c \
++	zos/ZOSProcess.c \
++	zos/ZOSProcessTable.c
++
++if HTOP_ZOS
++myhtopplatheaders = $(zos_platform_headers)
++myhtopplatsources = $(zos_platform_sources)
++endif
++
+ # Performance Co-Pilot (PCP)
+ # --------------------------
+ 
+diff --git c/config.h.in w/config.h.in
+index b70198b..a67b1e6 100644
+--- c/config.h.in
++++ w/config.h.in
+@@ -248,6 +248,9 @@
+ /* Building for an unsupported platform. */
+ #undef HTOP_UNSUPPORTED
+ 
++/* Building for zOS. */
++#undef HTOP_ZOS
++
+ /* Define to 1 if `major', `minor', and `makedev' are declared in <mkdev.h>.
+    */
+ #undef MAJOR_IN_MKDEV
+diff --git c/configure.ac w/configure.ac
+index e4df238..95bd13c 100644
+--- c/configure.ac
++++ w/configure.ac
+@@ -51,6 +51,10 @@ solaris*)
+    my_htop_platform=solaris
+    AC_DEFINE([HTOP_SOLARIS], [], [Building for Solaris.])
+    ;;
++openedition*)
++   my_htop_platform=zos
++   AC_DEFINE([HTOP_ZOS], [], [Building for zOS.])
++   ;;
+ *)
+    my_htop_platform=unsupported
+    AC_DEFINE([HTOP_UNSUPPORTED], [], [Building for an unsupported platform.])
+@@ -824,6 +828,7 @@ AM_CONDITIONAL([HTOP_NETBSD], [test "$my_htop_platform" = netbsd])
+ AM_CONDITIONAL([HTOP_OPENBSD], [test "$my_htop_platform" = openbsd])
+ AM_CONDITIONAL([HTOP_DARWIN], [test "$my_htop_platform" = darwin])
+ AM_CONDITIONAL([HTOP_SOLARIS], [test "$my_htop_platform" = solaris])
++AM_CONDITIONAL([HTOP_ZOS], [test "$my_htop_platform" = zos])
+ AM_CONDITIONAL([HTOP_PCP], [test "$my_htop_platform" = pcp])
+ AM_CONDITIONAL([HTOP_UNSUPPORTED], [test "$my_htop_platform" = unsupported])
+ 
+diff --git c/zos/Platform.c w/zos/Platform.c
+new file mode 100644
+index 0000000..7f26176
+--- /dev/null
++++ w/zos/Platform.c
+@@ -0,0 +1,298 @@
++/*
++htop - zos/Platform.c
++(C) 2014 Hisham H. Muhammad
++(C) 2015 David C. Hunt
++(C) 2017,2018 Guy M. Broome
++Released under the GNU GPLv2+, see the COPYING file
++in the source distribution for its full text.
++*/
++
++#include "config.h" // IWYU pragma: keep
++
++#include "zos/Platform.h"
++
++#include <math.h>
++#include <string.h>
++#include <time.h>
++#include <sys/resource.h>
++#include <sys/types.h>
++#include <sys/time.h>
++#include <utmpx.h>
++
++#include "Macros.h"
++#include "Meter.h"
++#include "CPUMeter.h"
++#include "MemoryMeter.h"
++#include "MemorySwapMeter.h"
++#include "SwapMeter.h"
++#include "TasksMeter.h"
++#include "LoadAverageMeter.h"
++#include "ClockMeter.h"
++#include "DateMeter.h"
++#include "DateTimeMeter.h"
++#include "HostnameMeter.h"
++#include "SysArchMeter.h"
++#include "UptimeMeter.h"
++#include "XUtils.h"
++
++#include "zos/ZOSMachine.h"
++
++const ScreenDefaults Platform_defaultScreens[] = {
++   {
++      .name = "Default",
++      .columns = "PID USER ASID JOBNAME NICE M_VIRT M_RESIDENT STATE NLWP PERCENT_CPU PERCENT_MEM TIME Command",
++      .sortKey = "PERCENT_CPU",
++   },
++};
++
++const unsigned int Platform_numberOfDefaultScreens = ARRAYSIZE(Platform_defaultScreens);
++
++const SignalItem Platform_signals[] = {
++   { .name = " 0 Cancel",      .number =  0 },
++   { .name = " 1 SIGHUP",      .number =  1 },
++   { .name = " 2 SIGINT",      .number =  2 },
++   { .name = " 3 SIGQUIT",     .number =  3 },
++   { .name = " 4 SIGILL",      .number =  4 },
++   { .name = " 5 SIGTRAP",     .number =  5 },
++   { .name = " 6 SIGABRT/IOT", .number =  6 },
++   { .name = " 7 SIGEMT",      .number =  7 },
++   { .name = " 8 SIGFPE",      .number =  8 },
++   { .name = " 9 SIGKILL",     .number =  9 },
++   { .name = "10 SIGBUS",      .number = 10 },
++   { .name = "11 SIGSEGV",     .number = 11 },
++   { .name = "12 SIGSYS",      .number = 12 },
++   { .name = "13 SIGPIPE",     .number = 13 },
++   { .name = "14 SIGALRM",     .number = 14 },
++   { .name = "15 SIGTERM",     .number = 15 },
++   { .name = "16 SIGUSR1",     .number = 16 },
++   { .name = "17 SIGUSR2",     .number = 17 },
++   { .name = "18 SIGCHLD/CLD", .number = 18 },
++   { .name = "19 SIGPWR",      .number = 19 },
++   { .name = "20 SIGWINCH",    .number = 20 },
++   { .name = "21 SIGURG",      .number = 21 },
++   { .name = "22 SIGPOLL/IO",  .number = 22 },
++   { .name = "23 SIGSTOP",     .number = 23 },
++   { .name = "24 SIGTSTP",     .number = 24 },
++   { .name = "25 SIGCONT",     .number = 25 },
++   { .name = "26 SIGTTIN",     .number = 26 },
++   { .name = "27 SIGTTOU",     .number = 27 },
++   { .name = "28 SIGVTALRM",   .number = 28 },
++   { .name = "29 SIGPROF",     .number = 29 },
++   { .name = "30 SIGXCPU",     .number = 30 },
++   { .name = "31 SIGXFSZ",     .number = 31 },
++   { .name = "32 SIGWAITING",  .number = 32 },
++   { .name = "33 SIGLWP",      .number = 33 },
++   { .name = "34 SIGFREEZE",   .number = 34 },
++   { .name = "35 SIGTHAW",     .number = 35 },
++   { .name = "36 SIGCANCEL",   .number = 36 },
++   { .name = "37 SIGLOST",     .number = 37 },
++   { .name = "38 SIGXRES",     .number = 38 },
++   { .name = "39 SIGJVM1",     .number = 39 },
++   { .name = "40 SIGJVM2",     .number = 40 },
++   { .name = "41 SIGINFO",     .number = 41 },
++};
++
++const unsigned int Platform_numberOfSignals = ARRAYSIZE(Platform_signals);
++
++const MeterClass* const Platform_meterTypes[] = {
++   &CPUMeter_class,
++   &ClockMeter_class,
++   &DateMeter_class,
++   &DateTimeMeter_class,
++   &LoadAverageMeter_class,
++   &LoadMeter_class,
++   &MemoryMeter_class,
++   &SwapMeter_class,
++   &MemorySwapMeter_class,
++   &TasksMeter_class,
++   &BatteryMeter_class,
++   &HostnameMeter_class,
++   &SysArchMeter_class,
++   &UptimeMeter_class,
++   &AllCPUsMeter_class,
++   &AllCPUs2Meter_class,
++   &AllCPUs4Meter_class,
++   &AllCPUs8Meter_class,
++   &LeftCPUsMeter_class,
++   &RightCPUsMeter_class,
++   &LeftCPUs2Meter_class,
++   &RightCPUs2Meter_class,
++   &LeftCPUs4Meter_class,
++   &RightCPUs4Meter_class,
++   &LeftCPUs8Meter_class,
++   &RightCPUs8Meter_class,
++   /*&ZfsArcMeter_class,
++   &ZfsCompressedArcMeter_class,*/
++   &BlankMeter_class,
++   &BlankMeter_class,
++   &BlankMeter_class,
++   NULL
++};
++
++bool Platform_init(void) {
++   /* no platform-specific setup needed */
++   return true;
++}
++
++void Platform_done(void) {
++   /* no platform-specific cleanup needed */
++}
++
++void Platform_setBindings(Htop_Action* keys) {
++   /* no platform-specific key bindings */
++   (void) keys;
++}
++
++int Platform_getUptime(void) {
++   int boot_time = 0;
++   int curr_time = time(NULL);
++   struct utmpx* ent;
++
++   while (( ent = getutxent() )) {
++      if ( String_eq("system boot", ent->ut_line )) {
++         boot_time = ent->ut_tv.tv_sec;
++      }
++   }
++
++   endutxent();
++
++   return (curr_time - boot_time);
++}
++
++void Platform_getLoadAverage(double* one, double* five, double* fifteen) {
++   double plat_loadavg[3];
++   if (getloadavg( plat_loadavg, 3 ) < 0) {
++      *one = NAN;
++      *five = NAN;
++      *fifteen = NAN;
++      return;
++   }
++   *one = plat_loadavg[0];
++   *five = plat_loadavg[1];
++   *fifteen = plat_loadavg[2];
++}
++
++pid_t Platform_getMaxPid(void) {
++   // z/OS PIDs are 32-bit integers and can be large (e.g. > 16 million)
++   return INT_MAX;
++}
++
++double Platform_setCPUValues(Meter* this, unsigned int cpu) {
++   const Machine* host = this->host;
++   const ZOSMachine* shost = (const ZOSMachine*) host;
++   unsigned int cpus = host->existingCPUs;
++   const CPUData* cpuData = NULL;
++
++   if (cpus == 1) {
++      // single CPU box has everything in spl->cpus[0]
++      cpuData = &(shost->cpus[0]);
++   } else {
++      cpuData = &(shost->cpus[cpu]);
++   }
++
++   if (!cpuData->online) {
++      this->curItems = 0;
++      return NAN;
++   }
++
++   double percent;
++   double* v = this->values;
++
++   v[CPU_METER_NICE]   = cpuData->nicePercent;
++   v[CPU_METER_NORMAL] = cpuData->userPercent;
++   v[CPU_METER_KERNEL] = cpuData->systemAllPercent;
++   this->curItems = 3;
++
++   percent = sumPositiveValues(v, this->curItems);
++   percent = MINIMUM(percent, 100.0);
++
++   v[CPU_METER_FREQUENCY] = cpuData->frequency;
++   v[CPU_METER_TEMPERATURE] = NAN;
++
++   return percent;
++}
++
++void Platform_setMemoryValues(Meter* this) {
++   const Machine* host = this->host;
++   this->total = host->totalMem;
++   this->values[MEMORY_METER_USED] = host->usedMem;
++   // this->values[MEMORY_METER_SHARED] = "shared memory, like tmpfs and shm"
++   // this->values[MEMORY_METER_COMPRESSED] = "compressed memory, like zswap on linux"
++   this->values[MEMORY_METER_BUFFERS] = host->buffersMem;
++   this->values[MEMORY_METER_CACHE] = host->cachedMem;
++   // this->values[MEMORY_METER_AVAILABLE] = "available memory"
++}
++
++void Platform_setSwapValues(Meter* this) {
++   const Machine* host = this->host;
++   this->total = host->totalSwap;
++   this->values[SWAP_METER_USED] = host->usedSwap;
++   // this->values[SWAP_METER_CACHE] = "pages that are both in swap and RAM, like SwapCached on linux"
++   // this->values[SWAP_METER_FRONTSWAP] = "pages that are accounted to swap but stored elsewhere, like frontswap on linux"
++}
++
++char* Platform_getProcessEnv(pid_t pid) {
++   char path[64];
++   xSnprintf(path, sizeof(path), "/proc/%d/environ", pid);
++
++   FILE* fd = fopen(path, "rb");
++   if (!fd) return NULL;
++
++   size_t capacity = 4096;
++   size_t size = 0;
++   char* env = xMalloc(capacity);
++
++   size_t bytes;
++   while ((bytes = fread(env + size, 1, capacity - size - 1, fd)) > 0) {
++      size += bytes;
++      if (capacity - size < 4096) {
++         capacity *= 2;
++         env = xRealloc(env, capacity);
++      }
++   }
++
++   fclose(fd);
++
++   if (size == 0) {
++      free(env);
++      return NULL;
++   }
++
++   // Ensure double null termination
++   if (env[size-1] != '\0') {
++       env[size++] = '\0';
++   }
++   if (capacity < size + 1) {
++       env = xRealloc(env, size + 1);
++   }
++   env[size] = '\0';
++
++   return env;
++}
++
++FileLocks_ProcessData* Platform_getProcessLocks(pid_t pid) {
++   (void)pid;
++   return NULL;
++}
++
++void Platform_getFileDescriptors(double* used, double* max) {
++   *used = NAN;
++   *max = NAN;
++}
++
++bool Platform_getDiskIO(DiskIOData* data) {
++   // TODO
++   (void)data;
++   return false;
++}
++
++bool Platform_getNetworkIO(NetworkIOData* data) {
++   // TODO
++   (void)data;
++   return false;
++}
++
++void Platform_getBattery(double* percent, ACPresence* isOnAC) {
++   *percent = NAN;
++   *isOnAC = AC_ERROR;
++}
+diff --git c/zos/Platform.h w/zos/Platform.h
+new file mode 100644
+index 0000000..71800ba
+--- /dev/null
++++ w/zos/Platform.h
+@@ -0,0 +1,144 @@
++#ifndef HEADER_Platform
++#define HEADER_Platform
++/*
++htop - zos/Platform.h
++(C) 2014 Hisham H. Muhammad
++(C) 2015 David C. Hunt
++(C) 2017,2018 Guy M. Broome
++Released under the GNU GPLv2+, see the COPYING file
++in the source distribution for its full text.
++*/
++
++#include <signal.h>
++#include <stdbool.h>
++#include <limits.h>
++#include <stdbool.h>
++#include <stddef.h>
++#include <stdint.h>
++#include <sys/time.h>
++#include <sys/types.h>
++
++#include "Action.h"
++#include "BatteryMeter.h"
++#include "CommandLine.h"
++#include "DiskIOMeter.h"
++#include "Hashtable.h"
++#include "NetworkIOMeter.h"
++#include "ProcessLocksScreen.h"
++#include "SignalsPanel.h"
++#include "generic/gettime.h"
++#include "generic/hostname.h"
++#include "generic/uname.h"
++
++
++#define  kill(pid, signal) kill(pid / 1024, signal)
++
++typedef struct var kvar_t;
++
++extern const ScreenDefaults Platform_defaultScreens[];
++
++extern const unsigned int Platform_numberOfDefaultScreens;
++
++extern const SignalItem Platform_signals[];
++
++extern const unsigned int Platform_numberOfSignals;
++
++extern const MeterClass* const Platform_meterTypes[];
++
++bool Platform_init(void);
++
++void Platform_done(void);
++
++void Platform_setBindings(Htop_Action* keys);
++
++int Platform_getUptime(void);
++
++void Platform_getLoadAverage(double* one, double* five, double* fifteen);
++
++pid_t Platform_getMaxPid(void);
++
++double Platform_setCPUValues(Meter* this, unsigned int cpu);
++
++void Platform_setMemoryValues(Meter* this);
++
++void Platform_setSwapValues(Meter* this);
++
++void Platform_setZfsArcValues(Meter* this);
++
++void Platform_setZfsCompressedArcValues(Meter* this);
++
++char* Platform_getProcessEnv(pid_t pid);
++
++FileLocks_ProcessData* Platform_getProcessLocks(pid_t pid);
++
++void Platform_getFileDescriptors(double* used, double* max);
++
++bool Platform_getDiskIO(DiskIOData* data);
++
++bool Platform_getNetworkIO(NetworkIOData* data);
++
++void Platform_getBattery(double* percent, ACPresence* isOnAC);
++
++static inline void Platform_getHostname(char* buffer, size_t size) {
++   Generic_hostname(buffer, size);
++}
++
++static inline void Platform_getRelease(char** string) {
++   *string = Generic_uname();
++}
++
++#define PLATFORM_LONG_OPTIONS
++
++static inline void Platform_longOptionsUsage(ATTR_UNUSED const char* name) { }
++
++static inline CommandLineStatus Platform_getLongOption(ATTR_UNUSED int opt, ATTR_UNUSED int argc, ATTR_UNUSED char** argv) {
++   return STATUS_ERROR_EXIT;
++}
++
++static inline void Platform_gettime_realtime(struct timeval* tv, uint64_t* msec) {
++   Generic_gettime_realtime(tv, msec);
++}
++
++static inline void Platform_gettime_monotonic(uint64_t* msec) {
++   Generic_gettime_monotonic(msec);
++}
++
++static inline Hashtable* Platform_dynamicMeters(void) {
++   return NULL;
++}
++
++static inline void Platform_dynamicMetersDone(ATTR_UNUSED Hashtable* table) { }
++
++static inline void Platform_dynamicMeterInit(ATTR_UNUSED Meter* meter) { }
++
++static inline void Platform_dynamicMeterUpdateValues(ATTR_UNUSED Meter* meter) { }
++
++static inline void Platform_dynamicMeterDisplay(ATTR_UNUSED const Meter* meter, ATTR_UNUSED RichString* out) { }
++
++static inline Hashtable* Platform_dynamicColumns(void) {
++   return NULL;
++}
++
++static inline void Platform_dynamicColumnsDone(ATTR_UNUSED Hashtable* table) { }
++
++static inline const char* Platform_dynamicColumnName(ATTR_UNUSED unsigned int key) {
++   return NULL;
++}
++
++static inline bool Platform_dynamicColumnWriteField(ATTR_UNUSED const Process* proc, ATTR_UNUSED RichString* str, ATTR_UNUSED unsigned int key) {
++   return false;
++}
++
++static inline Hashtable* Platform_dynamicScreens(void) {
++   return NULL;
++}
++
++static inline void Platform_defaultDynamicScreens(ATTR_UNUSED Settings* settings) { }
++
++static inline void Platform_addDynamicScreen(ATTR_UNUSED ScreenSettings* ss) { }
++
++static inline void Platform_addDynamicScreenAvailableColumns(ATTR_UNUSED Panel* availableColumns, ATTR_UNUSED const char* screen) { }
++
++static inline void Platform_dynamicScreensDone(ATTR_UNUSED Hashtable* screens) { }
++
++#endif
+diff --git c/zos/ProcessField.h w/zos/ProcessField.h
+new file mode 100644
+index 0000000..c4d045c
+--- /dev/null
++++ w/zos/ProcessField.h
+@@ -0,0 +1,26 @@
++#ifndef HEADER_ZOSProcessField
++#define HEADER_ZOSProcessField
++/*
++htop - zos/ProcessField.h
++(C) 2020 htop dev team
++Released under the GNU GPLv2+, see the COPYING file
++in the source distribution for its full text.
++*/
++
++
++#define PLATFORM_PROCESS_FIELDS  \
++   ZONEID = 100,                 \
++   ZONE  = 101,                  \
++   PROJID = 102,                 \
++   TASKID = 103,                 \
++   POOLID = 104,                 \
++   CONTID = 105,                 \
++   LWPID = 106,                  \
++   ASID = 107,                   \
++   JOBNAME = 108,                \
++                                 \
++   DUMMY_BUMP_FIELD = CWD,       \
++   // End of list
++
++
++#endif /* HEADER_ZOSProcessField */
+diff --git c/zos/ZOSMachine.c w/zos/ZOSMachine.c
+new file mode 100644
+index 0000000..c8f6822
+--- /dev/null
++++ w/zos/ZOSMachine.c
+@@ -0,0 +1,222 @@
++/*
++htop - ZOSMachine.c
++(C) 2014 Hisham H. Muhammad
++(C) 2017,2018 Guy M. Broome
++Released under the GNU GPLv2+, see the COPYING file
++in the source distribution for its full text.
++*/
++
++#include "config.h" // IWYU pragma: keep
++
++#include "zos/ZOSMachine.h"
++
++#include <unistd.h>
++#include <stdlib.h>
++#include <sys/types.h>
++#include <limits.h>
++#include <string.h>
++#include <errno.h>
++#include <pwd.h>
++#include <math.h>
++#include <time.h>
++#include <sys/time.h>
++
++#include "CRT.h"
++#include "zos/Platform.h"
++#include "zos/zos_bpx.h"
++
++
++static void ZOSMachine_updateCPUcount(ZOSMachine* this) {
++   Machine* super = &this->super;
++   long int s;
++   bool change = false;
++
++   s = sysconf(_SC_NPROCESSORS_ONLN);
++   if (s < 1)
++      CRT_fatalError("Cannot get active CPU count by sysconf(_SC_NPROCESSORS_ONLN)");
++
++   if (s != super->activeCPUs) {
++      change = true;
++      super->activeCPUs = s;
++      super->existingCPUs = s;
++   }
++}
++
++
++static void ZOSMachine_scanCPUTime(ZOSMachine* this) {
++   Machine* super = &this->super;
++   unsigned int existingCPUs = super->existingCPUs;
++   int arrskip = 0;
++
++   assert(existingCPUs > 0);
++
++   if (existingCPUs > 1) {
++      arrskip++;
++   }
++
++   struct timeval tv;
++   gettimeofday(&tv, NULL);
++   uint64_t currentTime = (uint64_t)tv.tv_sec * 1000000 + tv.tv_usec;
++   
++   if (this->prevTime == 0) {
++       // First run, just initialize
++       this->prevTime = currentTime;
++       this->prevGlobalUserTime = this->globalUserTime;
++       this->prevGlobalNiceTime = this->globalNiceTime;
++       this->prevGlobalSysTime = this->globalSysTime;
++       return;
++   }
++   
++   uint64_t timeDelta = currentTime - this->prevTime;
++   if (timeDelta == 0) timeDelta = 1; // Avoid division by zero
++   
++   uint64_t userDelta = this->globalUserTime - this->prevGlobalUserTime;
++   uint64_t niceDelta = this->globalNiceTime - this->prevGlobalNiceTime;
++   uint64_t sysDelta = this->globalSysTime - this->prevGlobalSysTime;
++   
++   // Total capacity of the system in this interval
++   uint64_t totalCapacity = timeDelta * existingCPUs;
++   
++   // Calculate Idle.
++   // Note: this assumes that (User + Nice + Sys) captures all busy time.
++   // If totalCapacity < (user + nice + sys), we clamp idle to 0.
++   uint64_t busyDelta = userDelta + niceDelta + sysDelta;
++   uint64_t idleDelta = 0;
++   
++   if (totalCapacity > busyDelta) {
++       idleDelta = totalCapacity - busyDelta;
++   }
++   
++   double userPercent = ((double)userDelta / totalCapacity) * 100.0;
++   double nicePercent = ((double)niceDelta / totalCapacity) * 100.0;
++   double sysPercent = ((double)sysDelta / totalCapacity) * 100.0;
++   double idlePercent = ((double)idleDelta / totalCapacity) * 100.0;
++   
++   // Distribute across CPUs (average)
++   for (unsigned int i = 0; i < existingCPUs; i++) {
++      CPUData* cpuData = &(this->cpus[i + arrskip]);
++      cpuData->online = true;
++      cpuData->userPercent = userPercent;
++      cpuData->systemPercent = sysPercent;
++      cpuData->systemAllPercent = sysPercent;
++      cpuData->nicePercent = nicePercent;
++      cpuData->irqPercent = 0.0;
++      cpuData->idlePercent = idlePercent;
++      cpuData->frequency = NAN;
++   }
++   
++   if (existingCPUs > 1) {
++      CPUData* cpuData = &(this->cpus[0]);
++      cpuData->userPercent = userPercent;
++      cpuData->systemPercent = sysPercent;
++      cpuData->systemAllPercent = sysPercent;
++      cpuData->nicePercent = nicePercent;
++      cpuData->irqPercent = 0.0;
++      cpuData->idlePercent = idlePercent;
++   }
++   
++   // Update previous values
++   this->prevTime = currentTime;
++   this->prevGlobalUserTime = this->globalUserTime;
++   this->prevGlobalNiceTime = this->globalNiceTime;
++   this->prevGlobalSysTime = this->globalSysTime;
++}
++
++static void ZOSMachine_scanMemoryInfo(ZOSMachine* this) {
++   Machine* super = &this->super;
++   
++   // Access z/OS control blocks for accurate memory stats
++   // CVT is at offset 0x10 in PSA (absolute 0)
++   uint32_t* psa = (uint32_t*)0;
++   uint32_t cvt_addr = psa[4]; // 0x10
++   uint32_t* cvt = (uint32_t*)(uintptr_t)cvt_addr;
++   
++   // CVTRLSTG is at CVT + 0x358 (856) -> Total Real Storage in KB
++   uint32_t real_storage_k = cvt[214]; // 856 / 4 = 214
++   
++   if (real_storage_k > 0) {
++       super->totalMem = real_storage_k;
++   } else {
++       super->totalMem = 1024 * 1024; // Fallback 1GB
++   }
++   
++   // CVTRCEP is at CVT + 0x490 (1168) -> Address of RCE
++   uint32_t rce_addr = cvt[292]; // 1168 / 4 = 292
++   uint32_t* rce = (uint32_t*)(uintptr_t)rce_addr;
++   
++   // RCEAFC is at RCE + 0x04 (4) -> Available Frame Count
++   uint32_t frames_avail = rce[1]; // 4 / 4 = 1
++   
++   uint64_t free_mem_k = (uint64_t)frames_avail * 4; // 4KB frames
++   
++   // Used = Total - Free
++   if (free_mem_k < super->totalMem) {
++       super->usedMem = super->totalMem - free_mem_k;
++   } else {
++       super->usedMem = 0; // Should not happen
++   }
++   
++   // We don't have simple counters for these on z/OS
++   super->cachedMem = 0;
++   super->buffersMem = 0;
++   
++   // Swap: z/OS Aux Storage is complex.
++   // For now, keep existing estimation or zero it if inaccurate.
++   // Existing was totalMem / 2.
++   super->totalSwap = super->totalMem / 2;
++   super->usedSwap = 0;
++}
++
++
++void Machine_scan(Machine* super) {
++   ZOSMachine* this = (ZOSMachine*) super;
++
++   ZOSMachine_updateCPUcount(this);
++   ZOSMachine_scanCPUTime(this);
++   ZOSMachine_scanMemoryInfo(this);
++}
++
++Machine* Machine_new(UsersTable* usersTable, uid_t userId) {
++   ZOSMachine* this = xCalloc(1, sizeof(ZOSMachine));
++   Machine* super = &this->super;
++
++   Machine_init(super, usersTable, userId);
++
++   this->pageSize = sysconf(_SC_PAGESIZE);
++   if (this->pageSize == -1)
++      CRT_fatalError("Cannot get pagesize by sysconf(_SC_PAGESIZE)");
++   this->pageSizeKB = this->pageSize / 1024;
++
++   ZOSMachine_updateCPUcount(this);
++
++   // Allocate memory for CPU data array
++   // If we have multiple CPUs, allocate existingCPUs + 1 to store average at index 0
++   size_t cpuArraySize = (super->existingCPUs > 1) ? (super->existingCPUs + 1) : 1;
++   this->cpus = xCalloc(cpuArraySize, sizeof(CPUData));
++   
++   // Initialize all CPUs as online
++   for (size_t i = 0; i < cpuArraySize; i++) {
++      this->cpus[i].online = true;
++   }
++
++   ZOSMachine_scanMemoryInfo(this);
++
++   return super;
++}
++
++void Machine_delete(Machine* super) {
++   ZOSMachine* this = (ZOSMachine*) super;
++
++   Machine_done(super);
++
++   free(this->cpus);
++   free(this);
++}
++
++bool Machine_isCPUonline(const Machine* super, unsigned int id) {
++   assert(id < super->existingCPUs);
++
++   const ZOSMachine* this = (const ZOSMachine*) super;
++
++   return (super->existingCPUs == 1) ? true : this->cpus[id + 1].online;
++}
+diff --git c/zos/ZOSMachine.h w/zos/ZOSMachine.h
+new file mode 100644
+index 0000000..6af45d0
+--- /dev/null
++++ w/zos/ZOSMachine.h
+@@ -0,0 +1,58 @@
++#ifndef HEADER_ZOSMachine
++#define HEADER_ZOSMachine
++/*
++htop - ZOSMachine.h
++(C) 2014 Hisham H. Muhammad
++(C) 2017,2018 Guy M. Broome
++Released under the GNU GPLv2+, see the COPYING file
++in the source distribution for its full text.
++*/
++
++#include <stdbool.h>
++#include <stdint.h>
++#include <sys/param.h>
++#include <sys/resource.h>
++#include <sys/uio.h>
++
++#include "Machine.h"
++#include "Hashtable.h"
++#include "UsersTable.h"
++
++
++
++#define ZONE_ERRMSGLEN 1024
++extern char zone_errmsg[ZONE_ERRMSGLEN];
++
++typedef struct CPUData_ {
++   double userPercent;
++   double nicePercent;
++   double systemPercent;
++   double irqPercent;
++   double idlePercent;
++   double systemAllPercent;
++   double frequency;
++   uint64_t luser;
++   uint64_t lkrnl;
++   uint64_t lintr;
++   uint64_t lidle;
++   bool online;
++} CPUData;
++
++typedef struct ZOSMachine_ {
++   Machine super;
++
++   CPUData* cpus;
++
++   int pageSize;
++   int pageSizeKB;
++
++   uint64_t globalUserTime;
++   uint64_t globalNiceTime;
++   uint64_t globalSysTime;
++   uint64_t prevGlobalUserTime;
++   uint64_t prevGlobalNiceTime;
++   uint64_t prevGlobalSysTime;
++   uint64_t prevTime;
++} ZOSMachine;
++
++#endif
+diff --git c/zos/ZOSProcess.c w/zos/ZOSProcess.c
+new file mode 100644
+index 0000000..a02117e
+--- /dev/null
++++ w/zos/ZOSProcess.c
+@@ -0,0 +1,148 @@
++/*
++htop - ZOSProcess.c
++(C) 2015 Hisham H. Muhammad
++(C) 2017,2018 Guy M. Broome
++Released under the GNU GPLv2+, see the COPYING file
++in the source distribution for its full text.
++*/
++
++#include "config.h" // IWYU pragma: keep
++
++#include "zos/ZOSProcess.h"
++
++#include <stdlib.h>
++#include <string.h>
++#include <unistd.h>
++
++#include "Process.h"
++#include "ProcessTable.h"
++#include "CRT.h"
++
++#include "zos/Platform.h"
++
++
++const ProcessFieldData Process_fields[LAST_PROCESSFIELD] = {
++   [0] = { .name = "", .title = NULL, .description = NULL, .flags = 0, },
++   [PID] = { .name = "PID", .title = "PID", .description = "Process/thread ID", .flags = 0, .pidColumn = true, },
++   [COMM] = { .name = "Command", .title = "Command ", .description = "Command line", .flags = 0, },
++   [STATE] = { .name = "STATE", .title = "S ", .description = "Process state (S sleeping, R running, O onproc, Z zombie, T stopped, W waiting)", .flags = 0, },
++   [PPID] = { .name = "PPID", .title = "PPID", .description = "Parent process ID", .flags = 0, .pidColumn = true, },
++   [PGRP] = { .name = "PGRP", .title = "PGRP", .description = "Process group ID", .flags = 0, .pidColumn = true, },
++   [SESSION] = { .name = "SESSION", .title = "SID", .description = "Process's session ID", .flags = 0, .pidColumn = true, },
++   [TTY] = { .name = "TTY", .title = "TTY      ", .description = "Controlling terminal", .flags = 0, },
++   //[TPGID] = { .name = "TPGID", .title = "TPGID", .description = "Process ID of the fg process group of the controlling terminal", .flags = 0, .pidColumn = true, },
++   //[MINFLT] = { .name = "MINFLT", .title = "     MINFLT ", .description = "Number of minor faults which have not required loading a memory page from disk", .flags = 0, .defaultSortDesc = true, },
++   //[MAJFLT] = { .name = "MAJFLT", .title = "     MAJFLT ", .description = "Number of major faults which have required loading a memory page from disk", .flags = 0, .defaultSortDesc = true, },
++   [PRIORITY] = { .name = "PRIORITY", .title = "PRI ", .description = "Kernel's internal priority for the process", .flags = 0, },
++   [NICE] = { .name = "NICE", .title = "NI", .description = "Nice value (the higher the value, the more it lets other processes take priority)", .flags = 0, },
++   [STARTTIME] = { .name = "STARTTIME", .title = "START ", .description = "Time the process was started", .flags = 0, },
++   [ELAPSED] = { .name = "ELAPSED", .title = "ELAPSED  ", .description = "Time since the process was started", .flags = 0, },
++   [PROCESSOR] = { .name = "PROCESSOR", .title = "CPU ", .description = "Id of the CPU the process last executed on", .flags = 0, },
++   [M_VIRT] = { .name = "M_VIRT", .title = " VIRT ", .description = "Total program size in virtual memory", .flags = 0, .defaultSortDesc = true, },
++   [M_RESIDENT] = { .name = "M_RESIDENT", .title = "  RES ", .description = "Resident set size, size of the text and data sections, plus stack usage", .flags = 0, .defaultSortDesc = true, },
++   [ST_UID] = { .name = "ST_UID", .title = "UID", .description = "User ID of the process owner", .flags = 0, },
++   [PERCENT_CPU] = { .name = "PERCENT_CPU", .title = " CPU%", .description = "Percentage of the CPU time the process used in the last sampling", .flags = 0, .defaultSortDesc = true, .autoWidth = true, },
++   [PERCENT_NORM_CPU] = { .name = "PERCENT_NORM_CPU", .title = "NCPU%", .description = "Normalized percentage of the CPU time the process used in the last sampling (normalized by cpu count)", .flags = 0, .defaultSortDesc = true, .autoWidth = true, },
++   [PERCENT_MEM] = { .name = "PERCENT_MEM", .title = "MEM% ", .description = "Percentage of the memory the process is using, based on resident memory size", .flags = 0, .defaultSortDesc = true, },
++   [USER] = { .name = "USER", .title = "USER", .description = "Username of the process owner (or user ID if name cannot be determined)", .flags = 0, },
++   [TIME] = { .name = "TIME", .title = "  TIME+  ", .description = "Total time the process has spent in user and system time", .flags = 0, .defaultSortDesc = true, },
++   [NLWP] = { .name = "NLWP", .title = "THR ", .description = "Number of threads in the process", .flags = 0, },
++   [TGID] = { .name = "TGID", .title = "TGID", .description = "Thread group ID (i.e. process ID)", .flags = 0, .pidColumn = true, },
++   [PROC_COMM] = { .name = "COMM", .title = "COMM            ", .description = "comm string of the process", .flags = 0, },
++   [PROC_EXE] = { .name = "EXE", .title = "EXE             ", .description = "Basename of exe of the process", .flags = 0, },
++   [CWD] = { .name = "CWD", .title = "CWD                       ", .description = "The current working directory of the process", .flags = PROCESS_FLAG_CWD, },
++   [ZONEID] = { .name = "ZONEID", .title = "ZONEID", .description = "Zone ID", .flags = 0, .pidColumn = true, },
++   [ZONE] = { .name = "ZONE", .title = "ZONE             ", .description = "Zone name", .flags = 0, },
++   [PROJID] = { .name = "PROJID", .title = "PRJID", .description = "Project ID", .flags = 0, .pidColumn = true, },
++   [TASKID] = { .name = "TASKID", .title = "TSKID", .description = "Task ID", .flags = 0, .pidColumn = true, },
++   [POOLID] = { .name = "POOLID", .title = "POLID", .description = "Pool ID", .flags = 0, .pidColumn = true, },
++   [CONTID] = { .name = "CONTID", .title = "CNTID", .description = "Contract ID", .flags = 0, .pidColumn = true, },
++   [ASID] = { .name = "ASID", .title = "ASID", .description = "Address Space ID", .flags = 0, .pidColumn = true, },
++   [JOBNAME] = { .name = "JOBNAME", .title = "JOBNAME", .description = "Job Name", .flags = 0, .autoWidth = true, },
++   //[LWPID] = { .name = "LWPID", .title = "LWPID", .description = "LWP ID", .flags = 0, .pidColumn = true, },
++};
++
++Process* ZOSProcess_new(const Machine* host) {
++   ZOSProcess* this = xCalloc(1, sizeof(ZOSProcess));
++   Object_setClass(this, Class(ZOSProcess));
++   Process_init(&this->super, host);
++   return &this->super;
++}
++
++void Process_delete(Object* cast) {
++   ZOSProcess* sp = (ZOSProcess*) cast;
++   Process_done((Process*)cast);
++   free(sp->zname);
++   free(sp->jobname);
++   free(sp);
++}
++
++static void ZOSProcess_rowWriteField(const Row* super, RichString* str, ProcessField field) {
++   const ZOSProcess* sp = (const ZOSProcess*) super;
++
++   char buffer[256]; buffer[255] = '\0';
++   int attr = CRT_colors[DEFAULT_COLOR];
++   size_t n = sizeof(buffer) - 1;
++
++   switch (field) {
++   // add ZOS-specific fields here
++   case PID: xSnprintf(buffer, n, "%*d ", Process_pidDigits, sp->realpid); break;
++   case PPID: xSnprintf(buffer, n, "%*d ", Process_pidDigits, sp->realppid); break;
++   case TGID: xSnprintf(buffer, n, "%*d ", Process_pidDigits, sp->realtgid); break;
++   case NLWP:
++      if (sp->super.nlwp == 1)
++         attr = CRT_colors[PROCESS_SHADOW];
++      xSnprintf(buffer, n, "%4ld ", sp->super.nlwp);
++      break;
++   //case LWPID: xSnprintf(buffer, n, "%*d ", Process_pidDigits, sp->lwpid); break;
++   case ASID: xSnprintf(buffer, n, "%*d ", Process_pidDigits, sp->asid); break;
++   case JOBNAME: 
++      if (sp->jobname && sp->jobname[0] != '\0') {
++         xSnprintf(buffer, n, "%-*.*s ", Row_fieldWidths[JOBNAME], Row_fieldWidths[JOBNAME], sp->jobname);
++      } else {
++         xSnprintf(buffer, n, "%-*.*s ", Row_fieldWidths[JOBNAME], Row_fieldWidths[JOBNAME], "-");
++      }
++      break;
++   default:
++      Process_writeField(&sp->super, str, field);
++      return;
++   }
++
++   RichString_appendWide(str, attr, buffer);
++}
++
++static int ZOSProcess_compareByKey(const Process* v1, const Process* v2, ProcessField key) {
++   const ZOSProcess* p1 = (const ZOSProcess*)v1;
++   const ZOSProcess* p2 = (const ZOSProcess*)v2;
++
++   switch (key) {
++   case PID:
++      return SPACESHIP_NUMBER(p1->realpid, p2->realpid);
++   case PPID:
++      return SPACESHIP_NUMBER(p1->realppid, p2->realppid);
++   case ASID:
++      return SPACESHIP_NUMBER(p1->asid, p2->asid);
++   //case LWPID:
++   //   return SPACESHIP_NUMBER(p1->lwpid, p2->lwpid);
++   default:
++      return Process_compareByKey_Base(v1, v2, key);
++   }
++}
++
++const ProcessClass ZOSProcess_class = {
++   .super = {
++      .super = {
++         .extends = Class(Process),
++         .display = Row_display,
++         .delete = Process_delete,
++         .compare = Process_compare
++      },
++      .isHighlighted = Process_rowIsHighlighted,
++      .isVisible = Process_rowIsVisible,
++      .matchesFilter = Process_rowMatchesFilter,
++      .compareByParent = Process_compareByParent,
++      .sortKeyString = Process_rowGetSortKey,
++      .writeField = ZOSProcess_rowWriteField
++   },
++   .compareByKey = ZOSProcess_compareByKey
++};
+diff --git c/zos/ZOSProcess.h w/zos/ZOSProcess.h
+new file mode 100644
+index 0000000..2e2fafc
+--- /dev/null
++++ w/zos/ZOSProcess.h
+@@ -0,0 +1,35 @@
++#ifndef HEADER_ZOSProcess
++#define HEADER_ZOSProcess
++/*
++htop - ZOSProcess.h
++(C) 2015 Hisham H. Muhammad
++(C) 2017,2018 Guy M. Broome
++Released under the GNU GPLv2+, see the COPYING file
++in the source distribution for its full text.
++*/
++
++#include "Process.h"
++#include "Machine.h"
++
++
++typedef struct ZOSProcess_ {
++   Process    super;
++   char*      zname;
++   pid_t      realpid;
++   pid_t      realppid;
++   pid_t      realtgid;
++   pid_t      lwpid;
++   int        asid;
++   char*      jobname;
++   uint64_t   last_total_mics;
++} ZOSProcess;
++
++extern const ProcessClass ZOSProcess_class;
++
++extern const ProcessFieldData Process_fields[LAST_PROCESSFIELD];
++
++Process* ZOSProcess_new(const Machine* host);
++
++void Process_delete(Object* cast);
++
++#endif
+diff --git c/zos/ZOSProcessTable.c w/zos/ZOSProcessTable.c
+new file mode 100644
+index 0000000..8cc6d87
+--- /dev/null
++++ w/zos/ZOSProcessTable.c
+@@ -0,0 +1,372 @@
++/*
++htop - ZOSProcessTable.c
++(C) 2014 Hisham H. Muhammad
++(C) 2017,2018 Guy M. Broome
++Released under the GNU GPLv2+, see the COPYING file
++in the source distribution for its full text.
++*/
++
++#include "config.h" // IWYU pragma: keep
++
++#include "zos/ZOSProcessTable.h"
++
++#include <unistd.h>
++#include <stdlib.h>
++#include <sys/types.h>
++#include <limits.h>
++#include <string.h>
++#include <errno.h>
++#include <pwd.h>
++#include <math.h>
++#include <time.h>
++
++#include "CRT.h"
++#include "zos/Platform.h"
++#include "zos/ZOSProcess.h"
++#include "zos/ZOSMachine.h"
++#include "zos/zos_bpx.h"
++
++
++#define GZONE "global    "
++#define UZONE "unknown   "
++
++ProcessTable* ProcessTable_new(Machine* host, Hashtable* pidMatchList) {
++   ZOSProcessTable* this = xCalloc(1, sizeof(ZOSProcessTable));
++   Object_setClass(this, Class(ProcessTable));
++
++   ProcessTable* super = &this->super;
++   ProcessTable_init(super, Class(ZOSProcess), host, pidMatchList);
++
++   return super;
++}
++
++void ProcessTable_delete(Object* cast) {
++   ZOSProcessTable* this = (ZOSProcessTable*) cast;
++   ProcessTable_done(&this->super);
++   free(this);
++}
++
++static void ZOSProcessTable_updateExe(pid_t pid, Process* proc) {
++   char path[32];
++   xSnprintf(path, sizeof(path), "/proc/%d/path/a.out", pid);
++
++   char target[PATH_MAX];
++   ssize_t ret = readlink(path, target, sizeof(target) - 1);
++   if (ret <= 0)
++      return;
++
++   target[ret] = '\0';
++   Process_updateExe(proc, target);
++}
++
++static void ZOSProcessTable_updateCwd(pid_t pid, Process* proc) {
++   char path[32];
++   xSnprintf(path, sizeof(path), "/proc/%d/cwd", pid);
++
++   char target[PATH_MAX];
++   ssize_t ret = readlink(path, target, sizeof(target) - 1);
++   if (ret <= 0)
++      return;
++
++   target[ret] = '\0';
++   free_and_xStrdup(&proc->procCwd, target);
++}
++
++/* Taken from: https://docs.oracle.com/cd/E19253-01/817-6223/6mlkidlom/index.html#tbl-sched-state */
++static inline ProcessState ZOSProcessTable_getProcessState(char state) {
++   switch (state) {
++      case 'S': return SLEEPING;
++      case 'R': return RUNNABLE;
++      case 'O': return RUNNING;
++      case 'Z': return ZOMBIE;
++      case 'T': return STOPPED;
++      case 'I': return IDLE;
++      default: return UNKNOWN;
++   }
++}
++
++/* NOTE: the following is a callback function of type proc_walk_f
++ *       and MUST conform to the appropriate definition in order
++ *       to work.  See libproc(3LIB) on a ZOS or Illumos
++ *       system for more info.
++ */
++
++static int ZOSProcessTable_walkproc(void* listptr) {
++   bool preExisting;
++   pid_t getpid;
++
++   // Setup process list
++   ProcessTable* pt = (ProcessTable*) listptr;
++   ZOSProcessTable* spt = (ZOSProcessTable*) listptr;
++   //Machine* host = pt->host;
++
++   Process* proc            = ProcessTable_getProcess(pt, getpid, &preExisting, ZOSProcess_new);
++   ZOSProcess* sproc    = (ZOSProcess*) proc;
++   //const Settings* settings = host->settings;
++
++   // Common code pass 1
++   //proc->show               = false;
++   //proc->priority           = _lwpsinfo->pr_pri;
++   //proc->nice               = _lwpsinfo->pr_nice - NZERO;
++   //proc->processor          = _lwpsinfo->pr_onpro;
++   //proc->state              = ZOSProcessTable_getProcessState(_lwpsinfo->pr_sname);
++   // NOTE: This 'percentage' is a 16-bit BINARY FRACTIONS where 1.0 = 0x8000
++   // Source: https://docs.oracle.com/cd/E19253-01/816-5174/proc-4/index.html
++   // (accessed on 18 November 2017)
++   //proc->percent_mem        = ((uint16_t)_psinfo->pr_pctmem / (double)32768) * (double)100.0;
++   //proc->pgrp               = _psinfo->pr_pgid;
++   //proc->nlwp               = _psinfo->pr_nlwp;
++   //proc->session            = _psinfo->pr_sid;
++
++   //proc->tty_nr             = _psinfo->pr_ttydev;
++
++  //TODO: grab teh rest from solaris
++   return 0;
++}
++
++void ProcessTable_goThroughEntries(ProcessTable* super) {
++   ZOSMachine* host = (ZOSMachine*) super->super.host;
++   host->globalUserTime = 0;
++   host->globalNiceTime = 0;
++   host->globalSysTime = 0;
++   host->super.usedMem = 0;
++   
++   struct timeval tv;
++   gettimeofday(&tv, NULL);
++   uint64_t now_us = (uint64_t)tv.tv_sec * 1000000 + tv.tv_usec;
++   uint64_t period_us = now_us - host->prevTime;
++   if (host->prevTime == 0 || period_us == 0) period_us = 1000000; // Default 1s
++   double period_s = (double)period_us / 1000000.0;
++   
++   // Use BPX4GTH to enumerate all processes
++   PTHD_AREA_A input_data;
++   char output_buf[65536];
++   PTHD_AREA_B* B;
++   PTHD_AREA_C* C;
++   
++   int input_length = sizeof(input_data);
++   int output_length = sizeof(output_buf);
++   void* input_address = &input_data;
++   void* output_address = output_buf;
++   int rv, rc, rsn;
++   int count = 0;
++   
++   // Initialize input for first process
++   memset(&input_data, 0, sizeof(input_data));
++   input_data.call_state.pid = 0;
++   input_data.call_state.access_pid = PTHD_FIRST;
++   input_data.call_state.access_thid = PTHD_LAST;
++   input_data.outflags = PTHD_C_PROCESS | PTHD_D_CONTTY | PTHD_E_PATH | PTHD_F_COMMAND;
++   
++   // Loop through all processes
++   while (1) {
++      __bpx4gth(&input_length, &input_address, &output_length, &output_address, &rv, &rc, &rsn);
++      
++      if (rv == -1) {
++         if (rc == ESRCH) {
++            break;  // No more processes
++         }
++         break;
++      }
++      
++      B = (PTHD_AREA_B*)output_buf;
++      C = ADDR_OF_AREA_C(B);
++      
++      if (C != NULL) {
++         count++;
++         bool preExisting;
++         pid_t pid = C->pid;
++         
++         Process* proc = ProcessTable_getProcess(super, pid, &preExisting, ZOSProcess_new);
++         ZOSProcess* sproc = (ZOSProcess*) proc;
++         
++         // Try to get command from area F
++         PTHD_AREA_F* F = ADDR_OF_AREA_F(B);
++         PTHD_AREA_D* D = ADDR_OF_AREA_D(B);
++         PTHD_AREA_E* E = ADDR_OF_AREA_E(B);
++         
++         // Update process information
++         proc->super.show = true;
++         proc->super.id = C->pid;
++         Process_setThreadGroup(proc, C->pid);
++         Process_setParent(proc, C->ppid);
++         sproc->realpid = C->pid;
++         sproc->realppid = C->ppid;
++         proc->pgrp = C->pgrid;
++         
++         sproc->asid = C->asid;
++         
++         char jname[9];
++         memcpy(jname, C->jobname, 8);
++         jname[8] = '\0';
++         __e2a_l(jname, 8);
++         for (int i = 7; i >= 0 && (jname[i] == ' ' || jname[i] == '\0'); i--) jname[i] = '\0';
++         free(sproc->jobname);
++         sproc->jobname = xStrdup(jname);
++         
++         // CPU times
++         proc->session = C->sid;
++         proc->tty_nr = 0;
++         
++         if (D != NULL && D->len > 0) {
++             char tty[1024];
++             size_t len = D->len < sizeof(tty) - 1 ? D->len : sizeof(tty) - 1;
++             memcpy(tty, D->contty, len);
++             tty[len] = '\0';
++             __e2a_l(tty, len);
++             if (tty[0] != '\0' && tty[0] != '?') {
++                 free(proc->tty_name);
++                 proc->tty_name = xStrdup(tty);
++             }
++         }
++
++         if (E != NULL && E->len > 0) {
++             char path[1024];
++             size_t len = E->len < sizeof(path) - 1 ? E->len : sizeof(path) - 1;
++             memcpy(path, E->path, len);
++             path[len] = '\0';
++             __e2a_l(path, len);
++             Process_updateExe(proc, path);
++         }
++         
++         errno = 0;
++         int nice = getpriority(PRIO_PROCESS, C->pid);
++         if (nice == -1 && errno != 0) nice = 0;
++         proc->nice = nice;
++         proc->priority = C->priority;
++         proc->nlwp = C->thd_cnt;
++         
++         // CPU times
++         long ticks_per_sec = sysconf(_SC_CLK_TCK);
++         if (ticks_per_sec <= 0) ticks_per_sec = 100;
++         
++         // Use microseconds if available (always check headers/version in real world, but we assume @D7A support)
++         // Mics fields are char[8] but likely packed decimal or binary? 
++         // DSECT says XL8 (Hex Literal 8 bytes). zos_bpx.h defined as char[8]. 
++         // We should cast to uint64_t.
++         // These are in STCK format (bit 51 = 1 us). Shift right by 12 to get microseconds.
++         uint64_t user_mics = (*(uint64_t*)C->usertimeMics) >> 12;
++         uint64_t sys_mics = (*(uint64_t*)C->systimeMics) >> 12;
++         
++         if (nice > 0) {
++             host->globalNiceTime += user_mics;
++         } else {
++             host->globalUserTime += user_mics;
++         }
++         host->globalSysTime += sys_mics;
++
++         // High precision CPU calc
++         uint64_t current_total_mics = user_mics + sys_mics;
++         
++         if (preExisting && period_us > 0 && sproc->last_total_mics > 0) {
++             uint64_t delta_mics = 0;
++             if (current_total_mics > sproc->last_total_mics) {
++                 delta_mics = current_total_mics - sproc->last_total_mics;
++             }
++             proc->percent_cpu = ((double)delta_mics / (double)period_us) * 100.0;
++             proc->percent_cpu = CLAMP(proc->percent_cpu, 0.0, super->super.host->activeCPUs * 100.0);
++         } else {
++             proc->percent_cpu = 0.0;
++         }
++         sproc->last_total_mics = current_total_mics;
++         
++         // Convert microseconds to centiseconds (1/100th sec) for htop display
++         proc->time = current_total_mics / 10000;
++         
++         // Memory
++         proc->m_virt = C->size / 1024;  // Convert to KB
++         proc->m_resident = C->size / 1024;  // Approximation
++         host->super.usedMem += proc->m_virt;
++         
++         if (host->super.totalMem > 0) {
++             proc->percent_mem = (proc->m_resident * 100.0) / host->super.totalMem;
++         } else {
++             proc->percent_mem = 0.0;
++         }
++         
++         // User/Group IDs
++         proc->st_uid = C->euid;
++         proc->user = UsersTable_getRef(super->super.host->usersTable, C->euid);
++         
++         // State - simplified for now
++         if (C->state & PTHD_ZOMBIE) {
++            proc->state = ZOMBIE;
++         } else if (C->state & PTHD_STOPPED) {
++            proc->state = STOPPED;
++         } else {
++            proc->state = RUNNING;  // Simplified
++            super->runningTasks++;
++         }
++         
++         super->totalTasks++;
++         
++         // Try to get command from area F first
++         char cmdline[256] = {0};
++         bool got_command = false;
++         
++         if (F != NULL) {
++            // F->len is in EBCDIC, need to convert to get actual length
++            uint16_t cmd_len_raw = F->len;
++            
++            // Check if we have valid data (len should be reasonable)
++            if (cmd_len_raw > 0 && cmd_len_raw < 2048) {
++               size_t cmd_len = (cmd_len_raw < sizeof(cmdline) - 1) ? cmd_len_raw : sizeof(cmdline) - 1;
++               memcpy(cmdline, F->command, cmd_len);
++               cmdline[cmd_len] = '\0';
++               __e2a_l(cmdline, cmd_len);
++               
++               // Replace null bytes with spaces (args are null-separated)
++               for (size_t i = 0; i < cmd_len - 1; i++) {
++                  if (cmdline[i] == '\0') cmdline[i] = ' ';
++               }
++               
++               // Trim trailing spaces
++               for (int i = cmd_len - 1; i >= 0 && cmdline[i] == ' '; i--) {
++                  cmdline[i] = '\0';
++               }
++               
++               if (cmdline[0] != '\0' && cmdline[0] != ' ') {
++                  got_command = true;
++               }
++            }
++         }
++         
++         // Fallback to jobname if no command
++         if (!got_command) {
++            char jobname[9];
++            memcpy(jobname, C->jobname, 8);
++            jobname[8] = '\0';
++            
++            // Convert from EBCDIC to ASCII
++            __e2a_l(jobname, 8);
++            
++            // Trim trailing spaces
++            for (int i = 7; i >= 0 && (jobname[i] == ' ' || jobname[i] == '\0'); i--) {
++               jobname[i] = '\0';
++            }
++            
++            // If jobname is empty, use PID as fallback
++            if (jobname[0] == '\0' || jobname[0] == ' ') {
++               snprintf(cmdline, sizeof(cmdline), "-");
++            } else {
++               strncpy(cmdline, jobname, sizeof(cmdline) - 1);
++            }
++         }
++         
++         Process_updateComm(proc, cmdline);
++         Process_updateCmdline(proc, cmdline, 0, strlen(cmdline));
++         
++         // Add process to table if it's new
++         if (!preExisting) {
++            ProcessTable_add(super, proc);
++         }
++         
++         // Mark process as updated
++         proc->super.updated = true;
++      }
++      
++      // Set up for next process
++      input_data.call_state = B->call_state;
++      input_data.call_state.access_pid = PTHD_NEXT;
++   }
++}
+diff --git c/zos/test_bpx.c w/zos/test_bpx.c
+new file mode 100644
+index 0000000..8bc0aa8
+--- /dev/null
++++ w/zos/test_bpx.c
+@@ -0,0 +1,69 @@
++/* Test program to debug BPX4GTH calls */
++#include <stdio.h>
++#include <string.h>
++#include <errno.h>
++#include "zos_bpx.h"
++
++extern void __bpx4gth(int *input_length, void **input_address,
++                      int *output_length, void **output_address,
++                      int *return_value, int *return_code, int *reason_code);
++
++int main() {
++    PTHD_AREA_A input_data;
++    char output_buf[65536];
++    PTHD_AREA_B* B;
++    PTHD_AREA_C* C;
++    
++    int input_length = sizeof(input_data);
++    int output_length = sizeof(output_buf);
++    void* input_address = &input_data;
++    void* output_address = output_buf;
++    int rv, rc, rsn;
++    int count = 0;
++    
++    // Initialize input for first process
++    memset(&input_data, 0, sizeof(input_data));
++    input_data.call_state.pid = 0;
++    input_data.call_state.access_pid = PTHD_FIRST;
++    input_data.call_state.access_thid = PTHD_LAST;
++    input_data.outflags = PTHD_C_PROCESS;
++    
++    printf("Starting BPX4GTH test...\n");
++    
++    // Loop through processes
++    while (count < 10) {  // Limit to 10 for testing
++        __bpx4gth(&input_length, &input_address, &output_length, &output_address, &rv, &rc, &rsn);
++        
++        printf("Call %d: rv=%d, rc=%d, rsn=%d\n", count, rv, rc, rsn);
++        
++        if (rv == -1) {
++            if (rc == ESRCH) {
++                printf("No more processes (ESRCH)\n");
++                break;
++            }
++            printf("Error: rc=%d, rsn=%d, errno=%d\n", rc, rsn, errno);
++            break;
++        }
++        
++        B = (PTHD_AREA_B*)output_buf;
++        C = ADDR_OF_AREA_C(B);
++        
++        if (C != NULL) {
++            char jobname[9];
++            memcpy(jobname, C->jobname, 8);
++            jobname[8] = '\0';
++            printf("  PID=%d, PPID=%d, Job=%s, Size=%u\n", 
++                   C->pid, C->ppid, jobname, C->size);
++            count++;
++        } else {
++            printf("  C is NULL\n");
++        }
++        
++        // Set up for next process
++        input_data.call_state = B->call_state;
++        input_data.call_state.access_pid = PTHD_NEXT;
++    }
++    
++    printf("Found %d processes\n", count);
++    return 0;
++}
+diff --git c/zos/zos_bpx.h w/zos/zos_bpx.h
+new file mode 100644
+index 0000000..0c1f5e7
+--- /dev/null
++++ w/zos/zos_bpx.h
+@@ -0,0 +1,159 @@
++/*
++htop - zos/zos_bpx.h
++BPX4GTH structures and wrapper for z/OS system calls
++Released under the GNU GPLv2+, see the COPYING file
++in the source distribution for its full text.
++*/
++
++#ifndef ZOS_BPX_H
++#define ZOS_BPX_H
++
++#include <sys/types.h>
++#include <stdint.h>
++
++/* BPX4GTH wrapper from zoslib */
++extern void __bpx4gth(int *input_length, void **input_address,
++                      int *output_length, void **output_address,
++                      int *return_value, int *return_code, int *reason_code);
++
++/* BPX4GTH access codes */
++#define PTHD_FIRST      0
++#define PTHD_CURRENT    1
++#define PTHD_NEXT       2
++#define PTHD_LAST       3
++
++/* BPX4GTH output flags */
++#define PTHD_C_PROCESS   0x80  /* Area C, process data */
++#define PTHD_D_CONTTY    0x40  /* Area D, contty */
++#define PTHD_E_PATH      0x20  /* Area E, path */
++#define PTHD_F_COMMAND   0x10  /* Area F, cmd & args */
++#define PTHD_G_FILEDATA  0x08  /* Area G, file data */
++#define PTHD_J_THREAD    0x04  /* Area J, thread data */
++#define PTHD_K_PTAG      0x02  /* Area K, ptag */
++
++/* State flags */
++#define PTHD_ZOMBIE      0x04
++#define PTHD_STOPPED     0x10
++
++/* Packed structures for BPX4GTH */
++#pragma pack(1)
++
++typedef struct {
++    pid_t  pid;
++    uint64_t thid;
++    char   access_pid;
++    char   access_thid;
++} PTHD_CALL_STATE;
++
++typedef struct {
++    PTHD_CALL_STATE call_state;
++    uint16_t asid;
++    char   logname[8];
++    char   outflags;
++    char   padding;
++} PTHD_AREA_A;
++
++typedef struct {
++    char   eye_catcher[4];
++    PTHD_CALL_STATE call_state;
++    char   padding[2];
++    uint32_t length_used;
++    char   dataendcode_c;
++    char   offset_c[3];
++    char   dataendcode_d;
++    char   offset_d[3];
++    char   dataendcode_e;
++    char   offset_e[3];
++    char   dataendcode_f;
++    char   offset_f[3];
++    char   dataendcode_g;
++    char   offset_g[3];
++    char   dataendcode_j;
++    char   offset_j[3];
++} PTHD_AREA_B;
++
++typedef struct {
++    char    eye_catcher[4];
++    uint16_t len;
++    char    command[2048];
++} PTHD_AREA_F;
++
++typedef struct {
++    char    eye_catcher[4];
++    uint16_t len;
++    char    contty[1024];
++} PTHD_AREA_D;
++
++typedef struct {
++    char    eye_catcher[4];
++    uint16_t len;
++    char    path[1024];
++} PTHD_AREA_E;
++
++typedef struct {
++    char    eye_catcher[4];
++    char    state;
++    char    flag2;
++    char    flag3;
++    char    padding;
++    pid_t   pid;
++    pid_t   ppid;
++    pid_t   pgrid;
++    pid_t   sid;
++    pid_t   fgpid;
++    uid_t   euid;
++    uid_t   ruid;
++    uid_t   suid;
++    gid_t   egid;
++    gid_t   rgid;
++    gid_t   sgid;
++    uint32_t size;
++    uint32_t slowpath_cnt;
++    uint32_t usertime;
++    uint32_t systime;
++    uint32_t starttime;
++    uint16_t oe_thd_cnt;
++    uint16_t pthd_creat_cnt;
++    uint16_t thd_cnt;
++    uint16_t asid;
++    char    jobname[8];
++    char    logname[8];
++    char    memlimit[4];
++    char    memusage[4];
++    char    usertimeMics[8];
++    char    systimeMics[8];
++    uint64_t starttime64;
++    int32_t priority;
++    uint64_t sigpnd;
++} PTHD_AREA_C;
++
++#pragma pack()
++
++/* Macro to convert 3-byte offset to integer */
++#define CONVERT_OFFSET(n)  (*((int *)n) >> 8)
++
++/* Macro to get address of area C from output buffer */
++#define ADDR_OF_AREA_C(x) \
++    ((PTHD_AREA_C *) \
++     (((CONVERT_OFFSET(((PTHD_AREA_B *)x)->offset_c)) != 0) * \
++     ((uintptr_t)x + CONVERT_OFFSET(((PTHD_AREA_B *)x)->offset_c))))
++
++/* Macro to get address of area D from output buffer */
++#define ADDR_OF_AREA_D(x) \
++    ((PTHD_AREA_D *) \
++     (((CONVERT_OFFSET(((PTHD_AREA_B *)x)->offset_d)) != 0) * \
++     ((uintptr_t)x + CONVERT_OFFSET(((PTHD_AREA_B *)x)->offset_d))))
++
++/* Macro to get address of area E from output buffer */
++#define ADDR_OF_AREA_E(x) \
++    ((PTHD_AREA_E *) \
++     (((CONVERT_OFFSET(((PTHD_AREA_B *)x)->offset_e)) != 0) * \
++     ((uintptr_t)x + CONVERT_OFFSET(((PTHD_AREA_B *)x)->offset_e))))
++
++/* Macro to get address of area F from output buffer */
++#define ADDR_OF_AREA_F(x) \
++    ((PTHD_AREA_F *) \
++     (((CONVERT_OFFSET(((PTHD_AREA_B *)x)->offset_f)) != 0) * \
++     ((uintptr_t)x + CONVERT_OFFSET(((PTHD_AREA_B *)x)->offset_f))))
++
++#endif /* ZOS_BPX_H */
+diff --git c/zos/ZOSProcessTable.h w/zos/ZOSProcessTable.h
+new file mode 100644
+index 0000000..3dcd956
+--- /dev/null
++++ w/zos/ZOSProcessTable.h
+@@ -0,0 +1,29 @@
++#ifndef HEADER_ZOSProcessTable
++#define HEADER_ZOSProcessTable
++/*
++htop - ZOSProcessTable.h
++(C) 2014 Hisham H. Muhammad
++(C) 2017,2018 Guy M. Broome
++Released under the GNU GPLv2+, see the COPYING file
++in the source distribution for its full text.
++*/
++
++#include <stdbool.h>
++#include <stdint.h>
++#include <sys/param.h>
++#include <sys/types.h>
++#include <sys/uio.h>
++#include <sys/resource.h>
++
++#include "Hashtable.h"
++#include "ProcessTable.h"
++#include "UsersTable.h"
++
++#include "zos/ZOSProcess.h"
++
++
++typedef struct ZOSProcessTable_ {
++   ProcessTable super;
++} ZOSProcessTable;
++
++#endif
+diff --git i/Meter.c w/Meter.c
+index 4463a90..3a15205 100644
+--- i/Meter.c
++++ w/Meter.c
+@@ -217,6 +217,7 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
+ 
+    // Record new value if necessary
+    const Machine* host = this->host;
++#ifndef __MVS__
+    if (!timercmp(&host->realtime, &(data->time), <)) {
+       int globalDelay = host->settings->delay;
+       struct timeval delay = { .tv_sec = globalDelay / 10, .tv_usec = (globalDelay % 10) * 100000L };
+@@ -230,6 +231,7 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
+          data->values[nValues - 1] = sumPositiveValues(this->values, this->curItems);
+       }
+    }
++#endif
+ 
+    if (w <= 0)
+       return;
+diff --git i/CRT.c w/CRT.c
+index 9c8b841..8252a10 100644
+--- i/CRT.c
++++ w/CRT.c
+@@ -71,7 +71,7 @@ static const char* const CRT_treeStrAscii[LAST_TREE_STR] = {
+    [TREE_STR_DESC] = "-",
+ };
+ 
+-#ifdef HAVE_LIBNCURSESW
++#if defined(HAVE_LIBNCURSESW) || defined(__MVS__)
+ 
+ static const char* const CRT_treeStrUtf8[LAST_TREE_STR] = {
+    [TREE_STR_VERT] = "\xe2\x94\x82", // │
+@@ -97,7 +97,7 @@ static const Settings* CRT_settings;
+ const char* CRT_degreeSign;
+ 
+ static const char* initDegreeSign(void) {
+-#ifdef HAVE_LIBNCURSESW
++#if defined(HAVE_LIBNCURSESW) || defined(__MVS__)
+    if (CRT_utf8)
+       return "\xc2\xb0";
+ 
+@@ -1127,18 +1127,26 @@ IGNORE_WCASTQUAL_END
+       CRT_colorScheme = COLORSCHEME_MONOCHROME;
+    CRT_setColors(CRT_colorScheme);
+ 
+-#ifdef HAVE_LIBNCURSESW
+-   if (allowUnicode && String_eq(nl_langinfo(CODESET), "UTF-8")) {
++#if defined(HAVE_LIBNCURSESW) || defined(__MVS__)
++#ifdef __MVS__
++   if (allowUnicode) {
+       CRT_utf8 = true;
+    } else {
+       CRT_utf8 = false;
+    }
++#else
++   if (allowUnicode && (String_eq(nl_langinfo(CODESET), "UTF-8"))) {
++      CRT_utf8 = true;
++   } else {
++      CRT_utf8 = false;
++   }
++#endif
+ #else
+    (void) allowUnicode;
+ #endif
+ 
+    CRT_treeStr =
+-#ifdef HAVE_LIBNCURSESW
++#if defined(HAVE_LIBNCURSESW) || defined(__MVS__)
+       CRT_utf8 ? CRT_treeStrUtf8 :
+ #endif
+       CRT_treeStrAscii;
