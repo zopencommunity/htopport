@@ -1,32 +1,3 @@
-diff --git c/Compat.c w/Compat.c
-index d0ad2cc..8bde89c 100644
---- c/Compat.c
-+++ w/Compat.c
-@@ -43,11 +43,13 @@ int Compat_faccessat(int dirfd,
- 
- #endif
- 
-+#ifndef __MVS__
-    // Error out on unsupported configurations
-    if (dirfd != (int)AT_FDCWD || mode != F_OK) {
-       errno = EINVAL;
-       return -1;
-    }
-+#endif
- 
-    // Fallback to stat(2)/lstat(2) depending on flags
-    struct stat statinfo;
-@@ -79,8 +81,10 @@ int Compat_fstatat(int dirfd,
-    char path[4096];
-    xSnprintf(path, sizeof(path), "%s/%s", dirpath, pathname);
- 
-+#ifndef __MVS__
-    if (flags & AT_SYMLINK_NOFOLLOW)
-       return lstat(path, statbuf);
-+#endif
- 
-    return stat(path, statbuf);
- 
 diff --git c/Makefile.am w/Makefile.am
 index ed92afa..01b2cb4 100644
 --- c/Makefile.am
@@ -65,26 +36,6 @@ index ed92afa..01b2cb4 100644
  # Performance Co-Pilot (PCP)
  # --------------------------
  
-diff --git c/Meter.c w/Meter.c
-index 86f8885..91a26af 100644
---- c/Meter.c
-+++ w/Meter.c
-@@ -320,6 +320,7 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
-       return;
- 
-    const Machine* host = this->host;
-+#ifndef __MVS__
-    if (!timercmp(&host->realtime, &(data->time), <)) {
-       int globalDelay = host->settings->delay;
-       struct timeval delay = { .tv_sec = globalDelay / 10, .tv_usec = (globalDelay % 10) * 100000L };
-@@ -329,6 +330,7 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
- 
-       data->values[nValues - 1] = sumPositiveValues(this->values, this->curItems);
-    }
-+#endif
- 
-    if (w <= 0)
-       return;
 diff --git c/config.h.in w/config.h.in
 index b70198b..a67b1e6 100644
 --- c/config.h.in
@@ -1450,7 +1401,7 @@ index 0000000..8cc6d87
 +            
 +            // If jobname is empty, use PID as fallback
 +            if (jobname[0] == '\0' || jobname[0] == ' ') {
-+               snprintf(cmdline, sizeof(cmdline), "PID_%d", C->pid);
++               snprintf(cmdline, sizeof(cmdline), "-");
 +            } else {
 +               strncpy(cmdline, jobname, sizeof(cmdline) - 1);
 +            }
@@ -1473,40 +1424,6 @@ index 0000000..8cc6d87
 +      input_data.call_state.access_pid = PTHD_NEXT;
 +   }
 +}
-diff --git c/zos/ZOSProcessTable.h w/zos/ZOSProcessTable.h
-new file mode 100644
-index 0000000..ade3e9c
---- /dev/null
-+++ w/zos/ZOSProcessTable.h
-@@ -0,0 +1,28 @@
-+#ifndef HEADER_ZOSProcessTable
-+#define HEADER_ZOSProcessTable
-+/*
-+htop - ZOSProcessTable.h
-+(C) 2014 Hisham H. Muhammad
-+(C) 2017,2018 Guy M. Broome
-+Released under the GNU GPLv2+, see the COPYING file
-+in the source distribution for its full text.
-+*/
-+
-+#include <stdbool.h>
-+#include <stdint.h>
-+#include <sys/param.h>
-+#include <sys/uio.h>
-+#include <sys/resource.h>
-+
-+#include "Hashtable.h"
-+#include "ProcessTable.h"
-+#include "UsersTable.h"
-+
-+#include "zos/ZOSProcess.h"
-+
-+
-+typedef struct ZOSProcessTable_ {
-+   ProcessTable super;
-+} ZOSProcessTable;
-+
-+#endif
 diff --git c/zos/test_bpx.c w/zos/test_bpx.c
 new file mode 100644
 index 0000000..8bc0aa8
@@ -1799,3 +1716,58 @@ index bd5453b..e969525 100644
        CRT_utf8 ? CRT_treeStrUtf8 :
  #endif
        CRT_treeStrAscii;
+diff --git c/zos/ZOSProcessTable.h w/zos/ZOSProcessTable.h
+new file mode 100644
+index 0000000..3dcd956
+--- /dev/null
++++ w/zos/ZOSProcessTable.h
+@@ -0,0 +1,29 @@
++#ifndef HEADER_ZOSProcessTable
++#define HEADER_ZOSProcessTable
++/*
++htop - ZOSProcessTable.h
++(C) 2014 Hisham H. Muhammad
++(C) 2017,2018 Guy M. Broome
++Released under the GNU GPLv2+, see the COPYING file
++in the source distribution for its full text.
++*/
++
++#include <stdbool.h>
++#include <stdint.h>
++#include <sys/param.h>
++#include <sys/types.h>
++#include <sys/uio.h>
++#include <sys/resource.h>
++
++#include "Hashtable.h"
++#include "ProcessTable.h"
++#include "UsersTable.h"
++
++#include "zos/ZOSProcess.h"
++
++
++typedef struct ZOSProcessTable_ {
++   ProcessTable super;
++} ZOSProcessTable;
++
++#endif
+diff --git i/Meter.c w/Meter.c
+index 4463a90..3a15205 100644
+--- i/Meter.c
++++ w/Meter.c
+@@ -217,6 +217,7 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
+ 
+    // Record new value if necessary
+    const Machine* host = this->host;
++#ifndef __MVS__
+    if (!timercmp(&host->realtime, &(data->time), <)) {
+       int globalDelay = host->settings->delay;
+       struct timeval delay = { .tv_sec = globalDelay / 10, .tv_usec = (globalDelay % 10) * 100000L };
+@@ -230,6 +231,7 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
+          data->values[nValues - 1] = sumPositiveValues(this->values, this->curItems);
+       }
+    }
++#endif
+ 
+    if (w <= 0)
+       return;

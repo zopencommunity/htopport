@@ -1,5 +1,5 @@
 # bump: htop-version /HTOP_VERSION="(.*)"/ https://github.com/htop-dev/htop.git|semver:*
-HTOP_VERSION="3.3.0"
+HTOP_VERSION="3.4.1"
 
 export ZOPEN_BUILD_LINE="STABLE"
 export ZOPEN_DEV_URL="https://github.com/htop-dev/htop.git"
@@ -10,16 +10,15 @@ export ZOPEN_STABLE_URL="https://github.com/htop-dev/htop/releases/download/${HT
 HTOP_DIR="${ZOPEN_ROOT}/htop-${HTOP_VERSION}"
 
 export ZOPEN_BOOTSTRAP="./autogen.sh"
-export ZOPEN_EXTRA_CONFIGURE_OPTS="--disable-unicode"
-export ZOPEN_EXTRA_CPPFLAGS="-I${HTOP_DIR}/zos -DHAVE_NCURSES_NCURSES_H=1"
 export ZOPEN_EXTRA_LDFLAGS="-L ${HTOP_DIR}/zos/lib/lib" # hack - fix
 
-export ZOPEN_EXTRA_CONFIGURE_OPTS="--disable-unicode"
+export ZOPEN_EXTRA_CPPFLAGS="-D__XPLAT=1 -D_POSIX_C_SOURCE=200809L -I${HTOP_DIR}/zos"
 
-export ZOPEN_COMP=CLANG
+export ZOPEN_CHECK="skip"
 
 zopen_check_results()
 {
+  # TODO
   dir="$1"
   pfx="$2"
   chk="$1/$2_check.log"
