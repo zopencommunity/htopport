@@ -1664,58 +1664,6 @@ index 0000000..0c1f5e7
 +     ((uintptr_t)x + CONVERT_OFFSET(((PTHD_AREA_B *)x)->offset_f))))
 +
 +#endif /* ZOS_BPX_H */
-diff --git i/CRT.c w/CRT.c
-index bd5453b..e969525 100644
---- i/CRT.c
-+++ w/CRT.c
-@@ -71,7 +71,7 @@ static const char* const CRT_treeStrAscii[LAST_TREE_STR] = {
-    [TREE_STR_DESC] = "-",
- };
- 
--#ifdef HAVE_LIBNCURSESW
-+#if defined(HAVE_LIBNCURSESW) || defined(__MVS__)
- 
- static const char* const CRT_treeStrUtf8[LAST_TREE_STR] = {
-    [TREE_STR_VERT] = "\xe2\x94\x82", // â
-@@ -98,7 +98,7 @@ static const int* CRT_delay;
- const char* CRT_degreeSign;
- 
- static const char* initDegreeSign(void) {
--#ifdef HAVE_LIBNCURSESW
-+#if defined(HAVE_LIBNCURSESW) || defined(__MVS__)
-    if (CRT_utf8)
-       return "\xc2\xb0";
- 
-@@ -1041,18 +1041,26 @@ IGNORE_WCASTQUAL_END
-       CRT_colorScheme = COLORSCHEME_MONOCHROME;
-    CRT_setColors(CRT_colorScheme);
- 
--#ifdef HAVE_LIBNCURSESW
--   if (allowUnicode && String_eq(nl_langinfo(CODESET), "UTF-8")) {
-+#if defined(HAVE_LIBNCURSESW) || defined(__MVS__)
-+#ifdef __MVS__
-+   if (allowUnicode) {
-       CRT_utf8 = true;
-    } else {
-       CRT_utf8 = false;
-    }
-+#else
-+   if (allowUnicode && (String_eq(nl_langinfo(CODESET), "UTF-8"))) {
-+      CRT_utf8 = true;
-+   } else {
-+      CRT_utf8 = false;
-+   }
-+#endif
- #else
-    (void) allowUnicode;
- #endif
- 
-    CRT_treeStr =
--#ifdef HAVE_LIBNCURSESW
-+#if defined(HAVE_LIBNCURSESW) || defined(__MVS__)
-       CRT_utf8 ? CRT_treeStrUtf8 :
- #endif
-       CRT_treeStrAscii;
 diff --git c/zos/ZOSProcessTable.h w/zos/ZOSProcessTable.h
 new file mode 100644
 index 0000000..3dcd956
@@ -1771,3 +1719,55 @@ index 4463a90..3a15205 100644
  
     if (w <= 0)
        return;
+diff --git i/CRT.c w/CRT.c
+index 9c8b841..8252a10 100644
+--- i/CRT.c
++++ w/CRT.c
+@@ -71,7 +71,7 @@ static const char* const CRT_treeStrAscii[LAST_TREE_STR] = {
+    [TREE_STR_DESC] = "-",
+ };
+ 
+-#ifdef HAVE_LIBNCURSESW
++#if defined(HAVE_LIBNCURSESW) || defined(__MVS__)
+ 
+ static const char* const CRT_treeStrUtf8[LAST_TREE_STR] = {
+    [TREE_STR_VERT] = "\xe2\x94\x82", // â
+@@ -97,7 +97,7 @@ static const Settings* CRT_settings;
+ const char* CRT_degreeSign;
+ 
+ static const char* initDegreeSign(void) {
+-#ifdef HAVE_LIBNCURSESW
++#if defined(HAVE_LIBNCURSESW) || defined(__MVS__)
+    if (CRT_utf8)
+       return "\xc2\xb0";
+ 
+@@ -1127,18 +1127,26 @@ IGNORE_WCASTQUAL_END
+       CRT_colorScheme = COLORSCHEME_MONOCHROME;
+    CRT_setColors(CRT_colorScheme);
+ 
+-#ifdef HAVE_LIBNCURSESW
+-   if (allowUnicode && String_eq(nl_langinfo(CODESET), "UTF-8")) {
++#if defined(HAVE_LIBNCURSESW) || defined(__MVS__)
++#ifdef __MVS__
++   if (allowUnicode) {
+       CRT_utf8 = true;
+    } else {
+       CRT_utf8 = false;
+    }
++#else
++   if (allowUnicode && (String_eq(nl_langinfo(CODESET), "UTF-8"))) {
++      CRT_utf8 = true;
++   } else {
++      CRT_utf8 = false;
++   }
++#endif
+ #else
+    (void) allowUnicode;
+ #endif
+ 
+    CRT_treeStr =
+-#ifdef HAVE_LIBNCURSESW
++#if defined(HAVE_LIBNCURSESW) || defined(__MVS__)
+       CRT_utf8 ? CRT_treeStrUtf8 :
+ #endif
+       CRT_treeStrAscii;
