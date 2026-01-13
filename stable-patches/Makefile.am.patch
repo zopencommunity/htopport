@@ -1,0 +1,38 @@
+diff --git c/Makefile.am w/Makefile.am
+index f25c0f0..db281e0 100644
+--- c/Makefile.am
++++ w/Makefile.am
+@@ -418,6 +418,33 @@ myhtopplatheaders = $(solaris_platform_headers)
+ myhtopplatsources = $(solaris_platform_sources)
+ endif
+ 
++# z/OS
++# -------
++
++zos_platform_headers = \
++	generic/gettime.h \
++	generic/hostname.h \
++	generic/uname.h \
++	zos/ProcessField.h \
++	zos/Platform.h \
++	zos/ZOSMachine.h \
++	zos/ZOSProcess.h \
++	zos/ZOSProcessTable.h
++
++zos_platform_sources = \
++	generic/gettime.c \
++	generic/hostname.c \
++	generic/uname.c \
++	zos/Platform.c \
++	zos/ZOSMachine.c \
++	zos/ZOSProcess.c \
++	zos/ZOSProcessTable.c
++
++if HTOP_ZOS
++myhtopplatheaders = $(zos_platform_headers)
++myhtopplatsources = $(zos_platform_sources)
++endif
++
+ # Performance Co-Pilot (PCP)
+ # --------------------------
+ 

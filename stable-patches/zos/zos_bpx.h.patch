@@ -1,0 +1,165 @@
+diff --git c/zos/zos_bpx.h w/zos/zos_bpx.h
+new file mode 100644
+index 0000000..0c1f5e7
+--- /dev/null
++++ w/zos/zos_bpx.h
+@@ -0,0 +1,159 @@
++/*
++htop - zos/zos_bpx.h
++BPX4GTH structures and wrapper for z/OS system calls
++Released under the GNU GPLv2+, see the COPYING file
++in the source distribution for its full text.
++*/
++
++#ifndef ZOS_BPX_H
++#define ZOS_BPX_H
++
++#include <sys/types.h>
++#include <stdint.h>
++
++/* BPX4GTH wrapper from zoslib */
++extern void __bpx4gth(int *input_length, void **input_address,
++                      int *output_length, void **output_address,
++                      int *return_value, int *return_code, int *reason_code);
++
++/* BPX4GTH access codes */
++#define PTHD_FIRST      0
++#define PTHD_CURRENT    1
++#define PTHD_NEXT       2
++#define PTHD_LAST       3
++
++/* BPX4GTH output flags */
++#define PTHD_C_PROCESS   0x80  /* Area C, process data */
++#define PTHD_D_CONTTY    0x40  /* Area D, contty */
++#define PTHD_E_PATH      0x20  /* Area E, path */
++#define PTHD_F_COMMAND   0x10  /* Area F, cmd & args */
++#define PTHD_G_FILEDATA  0x08  /* Area G, file data */
++#define PTHD_J_THREAD    0x04  /* Area J, thread data */
++#define PTHD_K_PTAG      0x02  /* Area K, ptag */
++
++/* State flags */
++#define PTHD_ZOMBIE      0x04
++#define PTHD_STOPPED     0x10
++
++/* Packed structures for BPX4GTH */
++#pragma pack(1)
++
++typedef struct {
++    pid_t  pid;
++    uint64_t thid;
++    char   access_pid;
++    char   access_thid;
++} PTHD_CALL_STATE;
++
++typedef struct {
++    PTHD_CALL_STATE call_state;
++    uint16_t asid;
++    char   logname[8];
++    char   outflags;
++    char   padding;
++} PTHD_AREA_A;
++
++typedef struct {
++    char   eye_catcher[4];
++    PTHD_CALL_STATE call_state;
++    char   padding[2];
++    uint32_t length_used;
++    char   dataendcode_c;
++    char   offset_c[3];
++    char   dataendcode_d;
++    char   offset_d[3];
++    char   dataendcode_e;
++    char   offset_e[3];
++    char   dataendcode_f;
++    char   offset_f[3];
++    char   dataendcode_g;
++    char   offset_g[3];
++    char   dataendcode_j;
++    char   offset_j[3];
++} PTHD_AREA_B;
++
++typedef struct {
++    char    eye_catcher[4];
++    uint16_t len;
++    char    command[2048];
++} PTHD_AREA_F;
++
++typedef struct {
++    char    eye_catcher[4];
++    uint16_t len;
++    char    contty[1024];
++} PTHD_AREA_D;
++
++typedef struct {
++    char    eye_catcher[4];
++    uint16_t len;
++    char    path[1024];
++} PTHD_AREA_E;
++
++typedef struct {
++    char    eye_catcher[4];
++    char    state;
++    char    flag2;
++    char    flag3;
++    char    padding;
++    pid_t   pid;
++    pid_t   ppid;
++    pid_t   pgrid;
++    pid_t   sid;
++    pid_t   fgpid;
++    uid_t   euid;
++    uid_t   ruid;
++    uid_t   suid;
++    gid_t   egid;
++    gid_t   rgid;
++    gid_t   sgid;
++    uint32_t size;
++    uint32_t slowpath_cnt;
++    uint32_t usertime;
++    uint32_t systime;
++    uint32_t starttime;
++    uint16_t oe_thd_cnt;
++    uint16_t pthd_creat_cnt;
++    uint16_t thd_cnt;
++    uint16_t asid;
++    char    jobname[8];
++    char    logname[8];
++    char    memlimit[4];
++    char    memusage[4];
++    char    usertimeMics[8];
++    char    systimeMics[8];
++    uint64_t starttime64;
++    int32_t priority;
++    uint64_t sigpnd;
++} PTHD_AREA_C;
++
++#pragma pack()
++
++/* Macro to convert 3-byte offset to integer */
++#define CONVERT_OFFSET(n)  (*((int *)n) >> 8)
++
++/* Macro to get address of area C from output buffer */
++#define ADDR_OF_AREA_C(x) \
++    ((PTHD_AREA_C *) \
++     (((CONVERT_OFFSET(((PTHD_AREA_B *)x)->offset_c)) != 0) * \
++     ((uintptr_t)x + CONVERT_OFFSET(((PTHD_AREA_B *)x)->offset_c))))
++
++/* Macro to get address of area D from output buffer */
++#define ADDR_OF_AREA_D(x) \
++    ((PTHD_AREA_D *) \
++     (((CONVERT_OFFSET(((PTHD_AREA_B *)x)->offset_d)) != 0) * \
++     ((uintptr_t)x + CONVERT_OFFSET(((PTHD_AREA_B *)x)->offset_d))))
++
++/* Macro to get address of area E from output buffer */
++#define ADDR_OF_AREA_E(x) \
++    ((PTHD_AREA_E *) \
++     (((CONVERT_OFFSET(((PTHD_AREA_B *)x)->offset_e)) != 0) * \
++     ((uintptr_t)x + CONVERT_OFFSET(((PTHD_AREA_B *)x)->offset_e))))
++
++/* Macro to get address of area F from output buffer */
++#define ADDR_OF_AREA_F(x) \
++    ((PTHD_AREA_F *) \
++     (((CONVERT_OFFSET(((PTHD_AREA_B *)x)->offset_f)) != 0) * \
++     ((uintptr_t)x + CONVERT_OFFSET(((PTHD_AREA_B *)x)->offset_f))))
++
++#endif /* ZOS_BPX_H */

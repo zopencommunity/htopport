@@ -1,0 +1,228 @@
+diff --git c/zos/ZOSMachine.c w/zos/ZOSMachine.c
+new file mode 100644
+index 0000000..c8f6822
+--- /dev/null
++++ w/zos/ZOSMachine.c
+@@ -0,0 +1,222 @@
++/*
++htop - ZOSMachine.c
++(C) 2014 Hisham H. Muhammad
++(C) 2017,2018 Guy M. Broome
++Released under the GNU GPLv2+, see the COPYING file
++in the source distribution for its full text.
++*/
++
++#include "config.h" // IWYU pragma: keep
++
++#include "zos/ZOSMachine.h"
++
++#include <unistd.h>
++#include <stdlib.h>
++#include <sys/types.h>
++#include <limits.h>
++#include <string.h>
++#include <errno.h>
++#include <pwd.h>
++#include <math.h>
++#include <time.h>
++#include <sys/time.h>
++
++#include "CRT.h"
++#include "zos/Platform.h"
++#include "zos/zos_bpx.h"
++
++
++static void ZOSMachine_updateCPUcount(ZOSMachine* this) {
++   Machine* super = &this->super;
++   long int s;
++   bool change = false;
++
++   s = sysconf(_SC_NPROCESSORS_ONLN);
++   if (s < 1)
++      CRT_fatalError("Cannot get active CPU count by sysconf(_SC_NPROCESSORS_ONLN)");
++
++   if (s != super->activeCPUs) {
++      change = true;
++      super->activeCPUs = s;
++      super->existingCPUs = s;
++   }
++}
++
++
++static void ZOSMachine_scanCPUTime(ZOSMachine* this) {
++   Machine* super = &this->super;
++   unsigned int existingCPUs = super->existingCPUs;
++   int arrskip = 0;
++
++   assert(existingCPUs > 0);
++
++   if (existingCPUs > 1) {
++      arrskip++;
++   }
++
++   struct timeval tv;
++   gettimeofday(&tv, NULL);
++   uint64_t currentTime = (uint64_t)tv.tv_sec * 1000000 + tv.tv_usec;
++   
++   if (this->prevTime == 0) {
++       // First run, just initialize
++       this->prevTime = currentTime;
++       this->prevGlobalUserTime = this->globalUserTime;
++       this->prevGlobalNiceTime = this->globalNiceTime;
++       this->prevGlobalSysTime = this->globalSysTime;
++       return;
++   }
++   
++   uint64_t timeDelta = currentTime - this->prevTime;
++   if (timeDelta == 0) timeDelta = 1; // Avoid division by zero
++   
++   uint64_t userDelta = this->globalUserTime - this->prevGlobalUserTime;
++   uint64_t niceDelta = this->globalNiceTime - this->prevGlobalNiceTime;
++   uint64_t sysDelta = this->globalSysTime - this->prevGlobalSysTime;
++   
++   // Total capacity of the system in this interval
++   uint64_t totalCapacity = timeDelta * existingCPUs;
++   
++   // Calculate Idle.
++   // Note: this assumes that (User + Nice + Sys) captures all busy time.
++   // If totalCapacity < (user + nice + sys), we clamp idle to 0.
++   uint64_t busyDelta = userDelta + niceDelta + sysDelta;
++   uint64_t idleDelta = 0;
++   
++   if (totalCapacity > busyDelta) {
++       idleDelta = totalCapacity - busyDelta;
++   }
++   
++   double userPercent = ((double)userDelta / totalCapacity) * 100.0;
++   double nicePercent = ((double)niceDelta / totalCapacity) * 100.0;
++   double sysPercent = ((double)sysDelta / totalCapacity) * 100.0;
++   double idlePercent = ((double)idleDelta / totalCapacity) * 100.0;
++   
++   // Distribute across CPUs (average)
++   for (unsigned int i = 0; i < existingCPUs; i++) {
++      CPUData* cpuData = &(this->cpus[i + arrskip]);
++      cpuData->online = true;
++      cpuData->userPercent = userPercent;
++      cpuData->systemPercent = sysPercent;
++      cpuData->systemAllPercent = sysPercent;
++      cpuData->nicePercent = nicePercent;
++      cpuData->irqPercent = 0.0;
++      cpuData->idlePercent = idlePercent;
++      cpuData->frequency = NAN;
++   }
++   
++   if (existingCPUs > 1) {
++      CPUData* cpuData = &(this->cpus[0]);
++      cpuData->userPercent = userPercent;
++      cpuData->systemPercent = sysPercent;
++      cpuData->systemAllPercent = sysPercent;
++      cpuData->nicePercent = nicePercent;
++      cpuData->irqPercent = 0.0;
++      cpuData->idlePercent = idlePercent;
++   }
++   
++   // Update previous values
++   this->prevTime = currentTime;
++   this->prevGlobalUserTime = this->globalUserTime;
++   this->prevGlobalNiceTime = this->globalNiceTime;
++   this->prevGlobalSysTime = this->globalSysTime;
++}
++
++static void ZOSMachine_scanMemoryInfo(ZOSMachine* this) {
++   Machine* super = &this->super;
++   
++   // Access z/OS control blocks for accurate memory stats
++   // CVT is at offset 0x10 in PSA (absolute 0)
++   uint32_t* psa = (uint32_t*)0;
++   uint32_t cvt_addr = psa[4]; // 0x10
++   uint32_t* cvt = (uint32_t*)(uintptr_t)cvt_addr;
++   
++   // CVTRLSTG is at CVT + 0x358 (856) -> Total Real Storage in KB
++   uint32_t real_storage_k = cvt[214]; // 856 / 4 = 214
++   
++   if (real_storage_k > 0) {
++       super->totalMem = real_storage_k;
++   } else {
++       super->totalMem = 1024 * 1024; // Fallback 1GB
++   }
++   
++   // CVTRCEP is at CVT + 0x490 (1168) -> Address of RCE
++   uint32_t rce_addr = cvt[292]; // 1168 / 4 = 292
++   uint32_t* rce = (uint32_t*)(uintptr_t)rce_addr;
++   
++   // RCEAFC is at RCE + 0x04 (4) -> Available Frame Count
++   uint32_t frames_avail = rce[1]; // 4 / 4 = 1
++   
++   uint64_t free_mem_k = (uint64_t)frames_avail * 4; // 4KB frames
++   
++   // Used = Total - Free
++   if (free_mem_k < super->totalMem) {
++       super->usedMem = super->totalMem - free_mem_k;
++   } else {
++       super->usedMem = 0; // Should not happen
++   }
++   
++   // We don't have simple counters for these on z/OS
++   super->cachedMem = 0;
++   super->buffersMem = 0;
++   
++   // Swap: z/OS Aux Storage is complex.
++   // For now, keep existing estimation or zero it if inaccurate.
++   // Existing was totalMem / 2.
++   super->totalSwap = super->totalMem / 2;
++   super->usedSwap = 0;
++}
++
++
++void Machine_scan(Machine* super) {
++   ZOSMachine* this = (ZOSMachine*) super;
++
++   ZOSMachine_updateCPUcount(this);
++   ZOSMachine_scanCPUTime(this);
++   ZOSMachine_scanMemoryInfo(this);
++}
++
++Machine* Machine_new(UsersTable* usersTable, uid_t userId) {
++   ZOSMachine* this = xCalloc(1, sizeof(ZOSMachine));
++   Machine* super = &this->super;
++
++   Machine_init(super, usersTable, userId);
++
++   this->pageSize = sysconf(_SC_PAGESIZE);
++   if (this->pageSize == -1)
++      CRT_fatalError("Cannot get pagesize by sysconf(_SC_PAGESIZE)");
++   this->pageSizeKB = this->pageSize / 1024;
++
++   ZOSMachine_updateCPUcount(this);
++
++   // Allocate memory for CPU data array
++   // If we have multiple CPUs, allocate existingCPUs + 1 to store average at index 0
++   size_t cpuArraySize = (super->existingCPUs > 1) ? (super->existingCPUs + 1) : 1;
++   this->cpus = xCalloc(cpuArraySize, sizeof(CPUData));
++   
++   // Initialize all CPUs as online
++   for (size_t i = 0; i < cpuArraySize; i++) {
++      this->cpus[i].online = true;
++   }
++
++   ZOSMachine_scanMemoryInfo(this);
++
++   return super;
++}
++
++void Machine_delete(Machine* super) {
++   ZOSMachine* this = (ZOSMachine*) super;
++
++   Machine_done(super);
++
++   free(this->cpus);
++   free(this);
++}
++
++bool Machine_isCPUonline(const Machine* super, unsigned int id) {
++   assert(id < super->existingCPUs);
++
++   const ZOSMachine* this = (const ZOSMachine*) super;
++
++   return (super->existingCPUs == 1) ? true : this->cpus[id + 1].online;
++}

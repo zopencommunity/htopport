@@ -1,0 +1,12 @@
+diff --git c/Process.c w/Process.c
+index 910443e..69c9ad4 100644
+--- c/Process.c
++++ w/Process.c
+@@ -20,6 +20,7 @@ in the source distribution for its full text.
+ #include <time.h>
+ #include <sys/resource.h>
+ 
++#include "Compat.h"
+ #include "CRT.h"
+ #include "Hashtable.h"
+ #include "Machine.h"

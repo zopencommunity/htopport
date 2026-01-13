@@ -1,0 +1,75 @@
+diff --git c/zos/test_bpx.c w/zos/test_bpx.c
+new file mode 100644
+index 0000000..8bc0aa8
+--- /dev/null
++++ w/zos/test_bpx.c
+@@ -0,0 +1,69 @@
++/* Test program to debug BPX4GTH calls */
++#include <stdio.h>
++#include <string.h>
++#include <errno.h>
++#include "zos_bpx.h"
++
++extern void __bpx4gth(int *input_length, void **input_address,
++                      int *output_length, void **output_address,
++                      int *return_value, int *return_code, int *reason_code);
++
++int main() {
++    PTHD_AREA_A input_data;
++    char output_buf[65536];
++    PTHD_AREA_B* B;
++    PTHD_AREA_C* C;
++    
++    int input_length = sizeof(input_data);
++    int output_length = sizeof(output_buf);
++    void* input_address = &input_data;
++    void* output_address = output_buf;
++    int rv, rc, rsn;
++    int count = 0;
++    
++    // Initialize input for first process
++    memset(&input_data, 0, sizeof(input_data));
++    input_data.call_state.pid = 0;
++    input_data.call_state.access_pid = PTHD_FIRST;
++    input_data.call_state.access_thid = PTHD_LAST;
++    input_data.outflags = PTHD_C_PROCESS;
++    
++    printf("Starting BPX4GTH test...\n");
++    
++    // Loop through processes
++    while (count < 10) {  // Limit to 10 for testing
++        __bpx4gth(&input_length, &input_address, &output_length, &output_address, &rv, &rc, &rsn);
++        
++        printf("Call %d: rv=%d, rc=%d, rsn=%d\n", count, rv, rc, rsn);
++        
++        if (rv == -1) {
++            if (rc == ESRCH) {
++                printf("No more processes (ESRCH)\n");
++                break;
++            }
++            printf("Error: rc=%d, rsn=%d, errno=%d\n", rc, rsn, errno);
++            break;
++        }
++        
++        B = (PTHD_AREA_B*)output_buf;
++        C = ADDR_OF_AREA_C(B);
++        
++        if (C != NULL) {
++            char jobname[9];
++            memcpy(jobname, C->jobname, 8);
++            jobname[8] = '\0';
++            printf("  PID=%d, PPID=%d, Job=%s, Size=%u\n", 
++                   C->pid, C->ppid, jobname, C->size);
++            count++;
++        } else {
++            printf("  C is NULL\n");
++        }
++        
++        // Set up for next process
++        input_data.call_state = B->call_state;
++        input_data.call_state.access_pid = PTHD_NEXT;
++    }
++    
++    printf("Found %d processes\n", count);
++    return 0;
++}

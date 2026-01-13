@@ -1,0 +1,379 @@
+diff --git c/zos/ZOSProcessTable.c w/zos/ZOSProcessTable.c
+new file mode 100644
+index 0000000..e5ad9e4
+--- /dev/null
++++ w/zos/ZOSProcessTable.c
+@@ -0,0 +1,373 @@
++/*
++htop - ZOSProcessTable.c
++(C) 2014 Hisham H. Muhammad
++(C) 2017,2018 Guy M. Broome
++Released under the GNU GPLv2+, see the COPYING file
++in the source distribution for its full text.
++*/
++
++#include "config.h" // IWYU pragma: keep
++
++#include "zos/ZOSProcessTable.h"
++
++#include <unistd.h>
++#include <stdlib.h>
++#include <sys/types.h>
++#include <limits.h>
++#include <string.h>
++#include <errno.h>
++#include <pwd.h>
++#include <math.h>
++#include <time.h>
++
++#include "CRT.h"
++#include "zos/Platform.h"
++#include "zos/ZOSProcess.h"
++#include "zos/ZOSMachine.h"
++#include "zos/zos_bpx.h"
++
++
++#define GZONE "global    "
++#define UZONE "unknown   "
++
++ProcessTable* ProcessTable_new(Machine* host, Hashtable* pidMatchList) {
++   ZOSProcessTable* this = xCalloc(1, sizeof(ZOSProcessTable));
++   Object_setClass(this, Class(ProcessTable));
++
++   ProcessTable* super = &this->super;
++   ProcessTable_init(super, Class(ZOSProcess), host, pidMatchList);
++
++   return super;
++}
++
++void ProcessTable_delete(Object* cast) {
++   ZOSProcessTable* this = (ZOSProcessTable*) cast;
++   ProcessTable_done(&this->super);
++   free(this);
++}
++
++static void ZOSProcessTable_updateExe(pid_t pid, Process* proc) {
++   char path[32];
++   xSnprintf(path, sizeof(path), "/proc/%d/path/a.out", pid);
++
++   char target[PATH_MAX];
++   ssize_t ret = readlink(path, target, sizeof(target) - 1);
++   if (ret <= 0)
++      return;
++
++   target[ret] = '\0';
++   Process_updateExe(proc, target);
++}
++
++static void ZOSProcessTable_updateCwd(pid_t pid, Process* proc) {
++   char path[32];
++   xSnprintf(path, sizeof(path), "/proc/%d/cwd", pid);
++
++   char target[PATH_MAX];
++   ssize_t ret = readlink(path, target, sizeof(target) - 1);
++   if (ret <= 0)
++      return;
++
++   target[ret] = '\0';
++   free_and_xStrdup(&proc->procCwd, target);
++}
++
++/* Taken from: https://docs.oracle.com/cd/E19253-01/817-6223/6mlkidlom/index.html#tbl-sched-state */
++static inline ProcessState ZOSProcessTable_getProcessState(char state) {
++   switch (state) {
++      case 'S': return SLEEPING;
++      case 'R': return RUNNABLE;
++      case 'O': return RUNNING;
++      case 'Z': return ZOMBIE;
++      case 'T': return STOPPED;
++      case 'I': return IDLE;
++      default: return UNKNOWN;
++   }
++}
++
++/* NOTE: the following is a callback function of type proc_walk_f
++ *       and MUST conform to the appropriate definition in order
++ *       to work.  See libproc(3LIB) on a ZOS or Illumos
++ *       system for more info.
++ */
++
++static int ZOSProcessTable_walkproc(void* listptr) {
++   bool preExisting;
++   pid_t getpid;
++
++   // Setup process list
++   ProcessTable* pt = (ProcessTable*) listptr;
++   ZOSProcessTable* spt = (ZOSProcessTable*) listptr;
++   //Machine* host = pt->host;
++
++   Process* proc            = ProcessTable_getProcess(pt, getpid, &preExisting, ZOSProcess_new);
++   ZOSProcess* sproc    = (ZOSProcess*) proc;
++   //const Settings* settings = host->settings;
++
++   // Common code pass 1
++   //proc->show               = false;
++   //proc->priority           = _lwpsinfo->pr_pri;
++   //proc->nice               = _lwpsinfo->pr_nice - NZERO;
++   //proc->processor          = _lwpsinfo->pr_onpro;
++   //proc->state              = ZOSProcessTable_getProcessState(_lwpsinfo->pr_sname);
++   // NOTE: This 'percentage' is a 16-bit BINARY FRACTIONS where 1.0 = 0x8000
++   // Source: https://docs.oracle.com/cd/E19253-01/816-5174/proc-4/index.html
++   // (accessed on 18 November 2017)
++   //proc->percent_mem        = ((uint16_t)_psinfo->pr_pctmem / (double)32768) * (double)100.0;
++   //proc->pgrp               = _psinfo->pr_pgid;
++   //proc->nlwp               = _psinfo->pr_nlwp;
++   //proc->session            = _psinfo->pr_sid;
++
++   //proc->tty_nr             = _psinfo->pr_ttydev;
++
++  //TODO: grab teh rest from solaris
++   return 0;
++}
++
++void ProcessTable_goThroughEntries(ProcessTable* super) {
++   ZOSMachine* host = (ZOSMachine*) super->super.host;
++   host->globalUserTime = 0;
++   host->globalNiceTime = 0;
++   host->globalSysTime = 0;
++   host->super.usedMem = 0;
++   
++   struct timeval tv;
++   gettimeofday(&tv, NULL);
++   uint64_t now_us = (uint64_t)tv.tv_sec * 1000000 + tv.tv_usec;
++   uint64_t period_us = now_us - host->prevTime;
++   if (host->prevTime == 0 || period_us == 0) period_us = 1000000; // Default 1s
++   double period_s = (double)period_us / 1000000.0;
++   
++   // Use BPX4GTH to enumerate all processes
++   PTHD_AREA_A input_data;
++   char output_buf[65536];
++   PTHD_AREA_B* B;
++   PTHD_AREA_C* C;
++   
++   int input_length = sizeof(input_data);
++   int output_length = sizeof(output_buf);
++   void* input_address = &input_data;
++   void* output_address = output_buf;
++   int rv, rc, rsn;
++   int count = 0;
++   
++   // Initialize input for first process
++   memset(&input_data, 0, sizeof(input_data));
++   input_data.call_state.pid = 0;
++   input_data.call_state.access_pid = PTHD_FIRST;
++   input_data.call_state.access_thid = PTHD_LAST;
++   input_data.outflags = PTHD_C_PROCESS | PTHD_D_CONTTY | PTHD_E_PATH | PTHD_F_COMMAND;
++   
++   // Loop through all processes
++   while (1) {
++      __bpx4gth(&input_length, &input_address, &output_length, &output_address, &rv, &rc, &rsn);
++      
++      if (rv == -1) {
++         if (rc == ESRCH) {
++            break;  // No more processes
++         }
++         break;
++      }
++      
++      B = (PTHD_AREA_B*)output_buf;
++      C = ADDR_OF_AREA_C(B);
++      
++      if (C != NULL) {
++         count++;
++         bool preExisting;
++         pid_t pid = C->pid;
++         
++         Process* proc = ProcessTable_getProcess(super, pid, &preExisting, ZOSProcess_new);
++         ZOSProcess* sproc = (ZOSProcess*) proc;
++         
++         // Try to get command from area F
++         PTHD_AREA_F* F = ADDR_OF_AREA_F(B);
++         PTHD_AREA_D* D = ADDR_OF_AREA_D(B);
++         PTHD_AREA_E* E = ADDR_OF_AREA_E(B);
++         
++         // Update process information
++         proc->super.show = true;
++         proc->super.id = C->pid;
++         Process_setThreadGroup(proc, C->pid);
++         Process_setParent(proc, C->ppid);
++         sproc->realpid = C->pid;
++         sproc->realppid = C->ppid;
++         proc->pgrp = C->pgrid;
++         
++         sproc->asid = C->asid;
++         
++         char jname[9];
++         memcpy(jname, C->jobname, 8);
++         jname[8] = '\0';
++         __e2a_l(jname, 8);
++         for (int i = 7; i >= 0 && (jname[i] == ' ' || jname[i] == '\0'); i--) jname[i] = '\0';
++         free(sproc->jobname);
++         sproc->jobname = xStrdup(jname);
++         Row_updateFieldWidth(JOBNAME, strlen(jname));
++         
++         // CPU times
++         proc->session = C->sid;
++         proc->tty_nr = 0;
++         
++         if (D != NULL && D->len > 0) {
++             char tty[1024];
++             size_t len = D->len < sizeof(tty) - 1 ? D->len : sizeof(tty) - 1;
++             memcpy(tty, D->contty, len);
++             tty[len] = '\0';
++             __e2a_l(tty, len);
++             if (tty[0] != '\0' && tty[0] != '?') {
++                 free(proc->tty_name);
++                 proc->tty_name = xStrdup(tty);
++             }
++         }
++
++         if (E != NULL && E->len > 0) {
++             char path[1024];
++             size_t len = E->len < sizeof(path) - 1 ? E->len : sizeof(path) - 1;
++             memcpy(path, E->path, len);
++             path[len] = '\0';
++             __e2a_l(path, len);
++             Process_updateExe(proc, path);
++         }
++         
++         errno = 0;
++         int nice = getpriority(PRIO_PROCESS, C->pid);
++         if (nice == -1 && errno != 0) nice = 0;
++         proc->nice = nice;
++         proc->priority = C->priority;
++         proc->nlwp = C->thd_cnt;
++         
++         // CPU times
++         long ticks_per_sec = sysconf(_SC_CLK_TCK);
++         if (ticks_per_sec <= 0) ticks_per_sec = 100;
++         
++         // Use microseconds if available (always check headers/version in real world, but we assume @D7A support)
++         // Mics fields are char[8] but likely packed decimal or binary? 
++         // DSECT says XL8 (Hex Literal 8 bytes). zos_bpx.h defined as char[8]. 
++         // We should cast to uint64_t.
++         // These are in STCK format (bit 51 = 1 us). Shift right by 12 to get microseconds.
++         uint64_t user_mics = (*(uint64_t*)C->usertimeMics) >> 12;
++         uint64_t sys_mics = (*(uint64_t*)C->systimeMics) >> 12;
++         
++         if (nice > 0) {
++             host->globalNiceTime += user_mics;
++         } else {
++             host->globalUserTime += user_mics;
++         }
++         host->globalSysTime += sys_mics;
++
++         // High precision CPU calc
++         uint64_t current_total_mics = user_mics + sys_mics;
++         
++         if (preExisting && period_us > 0 && sproc->last_total_mics > 0) {
++             uint64_t delta_mics = 0;
++             if (current_total_mics > sproc->last_total_mics) {
++                 delta_mics = current_total_mics - sproc->last_total_mics;
++             }
++             proc->percent_cpu = ((double)delta_mics / (double)period_us) * 100.0;
++             proc->percent_cpu = CLAMP(proc->percent_cpu, 0.0, super->super.host->activeCPUs * 100.0);
++         } else {
++             proc->percent_cpu = 0.0;
++         }
++         sproc->last_total_mics = current_total_mics;
++         
++         // Convert microseconds to centiseconds (1/100th sec) for htop display
++         proc->time = current_total_mics / 10000;
++         
++         // Memory
++         proc->m_virt = C->size / 1024;  // Convert to KB
++         proc->m_resident = C->size / 1024;  // Approximation
++         host->super.usedMem += proc->m_virt;
++         
++         if (host->super.totalMem > 0) {
++             proc->percent_mem = (proc->m_resident * 100.0) / host->super.totalMem;
++         } else {
++             proc->percent_mem = 0.0;
++         }
++         
++         // User/Group IDs
++         proc->st_uid = C->euid;
++         proc->user = UsersTable_getRef(super->super.host->usersTable, C->euid);
++         
++         // State - simplified for now
++         if (C->state & PTHD_ZOMBIE) {
++            proc->state = ZOMBIE;
++         } else if (C->state & PTHD_STOPPED) {
++            proc->state = STOPPED;
++         } else {
++            proc->state = RUNNING;  // Simplified
++            super->runningTasks++;
++         }
++         
++         super->totalTasks++;
++         
++         // Try to get command from area F first
++         char cmdline[256] = {0};
++         bool got_command = false;
++         
++         if (F != NULL) {
++            // F->len is in EBCDIC, need to convert to get actual length
++            uint16_t cmd_len_raw = F->len;
++            
++            // Check if we have valid data (len should be reasonable)
++            if (cmd_len_raw > 0 && cmd_len_raw < 2048) {
++               size_t cmd_len = (cmd_len_raw < sizeof(cmdline) - 1) ? cmd_len_raw : sizeof(cmdline) - 1;
++               memcpy(cmdline, F->command, cmd_len);
++               cmdline[cmd_len] = '\0';
++               __e2a_l(cmdline, cmd_len);
++               
++               // Replace null bytes with spaces (args are null-separated)
++               for (size_t i = 0; i < cmd_len - 1; i++) {
++                  if (cmdline[i] == '\0') cmdline[i] = ' ';
++               }
++               
++               // Trim trailing spaces
++               for (int i = cmd_len - 1; i >= 0 && cmdline[i] == ' '; i--) {
++                  cmdline[i] = '\0';
++               }
++               
++               if (cmdline[0] != '\0' && cmdline[0] != ' ') {
++                  got_command = true;
++               }
++            }
++         }
++         
++         // Fallback to jobname if no command
++         if (!got_command) {
++            char jobname[9];
++            memcpy(jobname, C->jobname, 8);
++            jobname[8] = '\0';
++            
++            // Convert from EBCDIC to ASCII
++            __e2a_l(jobname, 8);
++            
++            // Trim trailing spaces
++            for (int i = 7; i >= 0 && (jobname[i] == ' ' || jobname[i] == '\0'); i--) {
++               jobname[i] = '\0';
++            }
++            
++            // If jobname is empty, use PID as fallback
++            if (jobname[0] == '\0' || jobname[0] == ' ') {
++               snprintf(cmdline, sizeof(cmdline), "-");
++            } else {
++               strncpy(cmdline, jobname, sizeof(cmdline) - 1);
++            }
++         }
++         
++         Process_updateComm(proc, cmdline);
++         Process_updateCmdline(proc, cmdline, 0, strlen(cmdline));
++         
++         // Add process to table if it's new
++         if (!preExisting) {
++            ProcessTable_add(super, proc);
++         }
++         
++         // Mark process as updated
++         proc->super.updated = true;
++      }
++      
++      // Set up for next process
++      input_data.call_state = B->call_state;
++      input_data.call_state.access_pid = PTHD_NEXT;
++   }
++}

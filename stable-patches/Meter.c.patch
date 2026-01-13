@@ -1,0 +1,20 @@
+diff --git c/Meter.c w/Meter.c
+index 4463a90..3a15205 100644
+--- c/Meter.c
++++ w/Meter.c
+@@ -217,6 +217,7 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
+ 
+    // Record new value if necessary
+    const Machine* host = this->host;
++#ifndef __MVS__
+    if (!timercmp(&host->realtime, &(data->time), <)) {
+       int globalDelay = host->settings->delay;
+       struct timeval delay = { .tv_sec = globalDelay / 10, .tv_usec = (globalDelay % 10) * 100000L };
+@@ -230,6 +231,7 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
+          data->values[nValues - 1] = sumPositiveValues(this->values, this->curItems);
+       }
+    }
++#endif
+ 
+    if (w <= 0)
+       return;

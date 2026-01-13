@@ -1,0 +1,15 @@
+diff --git c/Compat.h w/Compat.h
+index 02b2fcb..4b27e7e 100644
+--- c/Compat.h
++++ w/Compat.h
+@@ -60,6 +60,10 @@ ssize_t Compat_readlink(openat_arg_t dirfd,
+                         char* buf,
+                         size_t bufsize);
+ 
++#ifndef HAVE_STPCPY
++char* stpcpy(char* restrict dest, const char* restrict src);
++#endif
++
+ /*
+  * static_assert() hack for pre-C11
+  * TODO: drop after moving to -std=c11 or newer
