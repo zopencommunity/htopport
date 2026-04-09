@@ -1,5 +1,5 @@
 # bump: htop-version /HTOP_VERSION="(.*)"/ https://github.com/htop-dev/htop.git|semver:*
-HTOP_VERSION="3.4.1"
+HTOP_VERSION="3.5.0"
 
 export ZOPEN_BUILD_LINE="STABLE"
 export ZOPEN_CATEGORIES="utilities"
