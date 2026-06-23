@@ -1,3 +1,5 @@
+[![CodeQL](https://github.com/zopencommunity/htopport/actions/workflows/codeql.yml/badge.svg)](https://github.com/zopencommunity/htopport/actions/workflows/codeql.yml)
+
 [![Automatic version updates](https://github.com/ZOSOpenTools/htopport/actions/workflows/bump.yml/badge.svg)](https://github.com/ZOSOpenTools/htopport/actions/workflows/bump.yml)
 
 # Htop
